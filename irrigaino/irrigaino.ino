@@ -5,6 +5,12 @@
 #include "time.h"
 #include "status.h"
 
+// define desired LCD colours
+#define FRAME_COLOUR VGA_LIME
+#define BACKGROUND_COLOUR VGA_BLACK
+#define TEXT_COLOUR VGA_WHITE
+#define BUTTON_COLOUR VGA_GREEN
+
 #define DS1307_ADDRESS 0x68
 
 /**************************************************************************************************
@@ -34,7 +40,7 @@ UTouch myTouch( 6, 5, 4, 3, 2);
 void drawFrame_1stscreen()
 {
   //draw the lines of screen 1
-  myGLCD.setColor(VGA_LIME); 
+  myGLCD.setColor(FRAME_COLOUR); 
   myGLCD.drawLine(319,100,0,100);   //[FIDOCAD] LI 316 100 0 100 0
   myGLCD.drawLine(195,0,195,100);   //[FIDOCAD] LI 195 0 195 100 0
   myGLCD.drawLine(319,175,0,175);   //[FIDOCAD] LI 319 175 0 175 0
@@ -42,7 +48,7 @@ void drawFrame_1stscreen()
   myGLCD.drawRect(0,0,319,239);     //[FIDOCAD] RV 0 0 319 239 0
   //draw the fixed text string of screen 1
   myGLCD.setFont(BigFont);
-  myGLCD.setColor(VGA_WHITE); 
+  myGLCD.setColor(TEXT_COLOUR); 
   myGLCD.print("ORA ATTUALE",5,1); 
   myGLCD.print("STATO",215,1); 
   myGLCD.setFont(SmallFont);
@@ -56,26 +62,22 @@ void drawFrame_2ndscreen()
 {
   //draw the lines of screen 2
   drawFrame_1stscreen();
-  myGLCD.setColor(VGA_LIME); 
+  myGLCD.setColor(FRAME_COLOUR); 
   myGLCD.drawLine(160,115,160,175);   //[FIDOCAD] LI 160 115 160 175 0
-  myGLCD.setColor(VGA_WHITE);
+  //draw text of screen 2
+  myGLCD.setColor(TEXT_COLOUR);
   myGLCD.print("IMPOSTAZIONI IRRIGAZIONE AUTOMATICA",15,101); 
   myGLCD.print("inizio",55,160); 
   myGLCD.print("fine",225,160); 
 
   //draw "AVVIA IRRIGAZIONE" button
-  myGLCD.setColor(VGA_GREEN);
+  myGLCD.setColor(BUTTON_COLOUR);
   myGLCD.fillRoundRect(205,65,310,95);             //[FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
-  myGLCD.setColor(VGA_WHITE);
+  myGLCD.setColor(TEXT_COLOUR);
   myGLCD.drawRoundRect (205,65,310,95);
   myGLCD.setFont(SmallFont);
   myGLCD.print("AVVIA",235,65);                   //[FIDOCAD] FJC B 0.5 TY 235 65 12 8 0 0 12 * AVVIA
   myGLCD.print("IRRIGAZIONE",210,80);             //[FIDOCAD] FJC B 0.5 TY 210 80 12 8 0 0 12 * IRRIGAZIONE
-
-  //take the actual time from RTC module & draw it on the screen
-  myGLCD.setFont(SevenSegNumFont);
-  myGLCD.print("20",20,30);                       //[FIDOCAD] FJC B 0.5 TY 20 30 50 32 0 0 0 Arial 23
-  myGLCD.print("30",105,30);                      //[FIDOCAD] FJC B 0.5 TY 105 30 50 32 0 0 0 Arial 59
 }
   
 void drawButtons()
@@ -94,9 +96,56 @@ void waitForIt(int x1, int y1, int x2, int y2)
   myGLCD.drawRoundRect (x1, y1, x2, y2);
 }
 
-void updateDisplayedData()
+// Re-draw the time on LCD
+void updateDisplayedTime(timedata_t* timedata)
 {
-    ///////////////////////////////////////////TODO HERE///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  static uint8_t minutes;
+  static uint8_t hours;
+  if((minutes!=timedata->time_hm.minutes)||(hours!=timedata->time_hm.hours))
+  {
+    minutes=timedata->time_hm.minutes;
+    hours=timedata->time_hm.hours;
+    
+    char hour_str[3], min_str[3];
+    
+    //_____________convert integer to 2-digit string_________
+    if (hours<10)
+    {
+      hour_str[0]='0';
+      hour_str[1]='0'+hours;
+    }
+    else
+    {
+      hour_str[0]='0'+hours/10;
+      hour_str[1]='0'+hours%10;
+    }
+    hour_str[2]='\0';
+  
+    if (minutes<10)
+    {
+      min_str[0]='0';
+      min_str[1]='0'+minutes;
+    }
+    else
+    {
+      min_str[0]='0'+minutes/10;
+      min_str[1]='0'+minutes%10;
+    }
+    min_str[2]='\0';
+  
+      ///////////////////////////////////////////TODO HERE///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    // clear prevoius time displayed drawing two filled black rectangles
+    myGLCD.setColor(BACKGROUND_COLOUR);
+    myGLCD.fillRoundRect(10,28,85,90);
+    myGLCD.fillRoundRect(108,28,185,90); 
+    
+    // draw actual time
+    myGLCD.setColor(TEXT_COLOUR);
+    myGLCD.setFont(SevenSegNumFont);
+    myGLCD.print(hour_str,20,30);        //[FIDOCAD] FJC B 0.5 TY 20 30 50 32 0 0 0 Arial 23
+    myGLCD.print(min_str,105,30);        //[FIDOCAD] FJC B 0.5 TY 105 30 50 32 0 0 0 Arial 59
+  }
 }
 
 //------------------------------- RTC & Time manipulation -----------------------------//
@@ -167,8 +216,11 @@ void loop()
 {
   while (true)
   {
+    // Get RTC data
+    updateDate(&irrigaino_sts.timedata);
+    // Update displayed time
+    updateDisplayedTime(&irrigaino_sts.timedata);
 
-    
     if (myTouch.dataAvailable())
     {
       myTouch.read();
