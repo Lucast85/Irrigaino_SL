@@ -3,23 +3,27 @@
 #include <UTouch.h> //Touchscreen driver for XPT2046
 
 #include "time.h"
+#include "status.h"
 
-// Initialize display
-UTFT    myGLCD(ITDB32S,38,39,40,41);
+#define DS1307_ADDRESS 0x68
 
-// Initialize touchscreen
-UTouch  myTouch( 6, 5, 4, 3, 2);
+/**************************************************************************************************
+***                                 Global Variables                                            ***
+**************************************************************************************************/
+int x, y;
+char stCurrent[20]="";
+int stCurrentLen=0;
+char stLast[20]="";
+status_t irrigaino_sts;
 
 // Declare which fonts we will be using
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
 extern uint8_t SevenSegNumFont[];
 
-int x, y;
-char stCurrent[20]="";
-int stCurrentLen=0;
-char stLast[20]="";
-timedata_t currentTime;
+// Build two objects: LCD and Touch instances
+UTFT myGLCD(ITDB32S,38,39,40,41);
+UTouch myTouch( 6, 5, 4, 3, 2);
 
 /**************************************************************************************************
 ***                                 Custom functions                                            ***
@@ -90,6 +94,38 @@ void waitForIt(int x1, int y1, int x2, int y2)
   myGLCD.drawRoundRect (x1, y1, x2, y2);
 }
 
+void updateDisplayedData()
+{
+    ///////////////////////////////////////////TODO HERE///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+
+//------------------------------- RTC & Time manipulation -----------------------------//
+
+// Convert binary coded decimal to normal decimal numbers
+byte bcdToDec(byte val)  
+{
+  return ( (val/16*10) + (val%16) );
+}
+
+// Update the actual date from RTC
+void updateDate(timedata_t* timedata)
+{
+  // Reset the register pointer
+  Wire.beginTransmission(DS1307_ADDRESS);
+  Wire.write(0x00);
+  Wire.endTransmission();
+  Wire.requestFrom(DS1307_ADDRESS, 7);
+
+    timedata->seconds = bcdToDec(Wire.read());
+    timedata->time_hm.minutes = bcdToDec(Wire.read() );
+    timedata->time_hm.hours = bcdToDec(Wire.read() & 0b111111); //24 hour time
+//    timedata->weekDay = bcdToDec(Wire.read()); //0-6 -> sunday - Saturday
+//    timedata->monthDay = bcdToDec(Wire.read());
+//    timedata->month = bcdToDec(Wire.read());
+//    timedata->year = bcdToDec(Wire.read());
+}
+
+
 /**************************************************************************************************
 ***                                 Required functions                                          ***
 **************************************************************************************************/
@@ -99,22 +135,39 @@ void setup()
 {
 // Initial setup
 
+  // Only for debug purposes
+  Serial.begin(9600);
+
+  // Initialize display
   myGLCD.InitLCD();
   myGLCD.clrScr();
-
+  myGLCD.setFont(BigFont);
+  myGLCD.setBackColor(VGA_TRANSPARENT);
+  
+  // Initialize touchscreen
   myTouch.InitTouch();
   myTouch.setPrecision(PREC_HI);
 
-  myGLCD.setFont(BigFont);
-  myGLCD.setBackColor(VGA_TRANSPARENT);
-  //drawButtons();
-  drawFrame_2ndscreen();  
+  // Initialize I2C & for RTC module
+  Wire.begin();
+  
+  // Draw main screen
+  drawFrame_1stscreen();
+  // Get RTC data
+  updateDate(&irrigaino_sts.timedata);
+
+  //ONLY FOR DEBUG !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  Serial.print(irrigaino_sts.timedata.time_hm.hours);
+  Serial.print(":");
+  Serial.print(irrigaino_sts.timedata.time_hm.minutes);
+  Serial.print("\n");
 }
 
 void loop()
 {
   while (true)
   {
+
     
     if (myTouch.dataAvailable())
     {
