@@ -1,3 +1,7 @@
+/************************************************************************************************
+***                           INCLUDE HEADER FILES                                            ***
+************************************************************************************************/
+
 #include <Wire.h>   //I2C driver for RTC
 #include <UTFT.h>   //TFT driver for SSD1289
 #include <UTouch.h> //Touchscreen driver for XPT2046
@@ -5,17 +9,33 @@
 #include "time.h"
 #include "status.h"
 
-// define desired LCD colours
-#define FRAME_COLOUR VGA_LIME
-#define BACKGROUND_COLOUR VGA_BLACK
-#define TEXT_COLOUR VGA_WHITE
-#define BUTTON_COLOUR VGA_GREEN
+/*************************************************************************************************
+***                                 DEFINE                                                     ***
+*************************************************************************************************/
 
-#define DS1307_ADDRESS 0x68
+// define desired LCD colours
+#define FRAME_COLOUR      VGA_LIME
+#define BACKGROUND_COLOUR VGA_BLACK
+#define TEXT_COLOUR       VGA_WHITE
+#define BUTTON_COLOUR     VGA_GREEN
+
+// RTC I2C address
+#define DS1307_ADDRESS    0x68
+
+// Soil Moisture
+#define SOIL_MOISTURE_PIN                 0    //analog input pin of the sensor
+#define SOILMOISTURE_LOWER_THRESHOLD      350  //the lower moisture threshold
+#define SOILMOISTURE_UPPER_THRESHOLD      700  //the upper moisture threshold
+
+// RELAY pin
+#define RELAY_PIN                         14    //the pin connected with the relay that control the water pump 
 
 /**************************************************************************************************
 ***                                 Global Variables                                            ***
 **************************************************************************************************/
+
+String inString = "";    // string to hold input    // Only for Debug!!!
+
 int x, y;
 char stCurrent[20]="";
 int stCurrentLen=0;
@@ -37,6 +57,52 @@ UTouch myTouch( 6, 5, 4, 3, 2);
 
 
 //------------------------------- 3.2" TFT display -----------------------------//
+
+void updateDisplayedIrrStartTime(time_hm_t* startTime)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+{
+  
+}
+void updateDisplayedIrrEndTime(time_hm_t* endTime)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+{
+  
+}
+
+void updateDisplayedStatusAndButton(irrigation_t* irrigation)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+{
+  //draw "AVVIA/STOP IRRIGAZIONE" button & update text
+  
+  myGLCD.setColor(BUTTON_COLOUR);
+  myGLCD.fillRoundRect(205,65,310,95);            // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
+  myGLCD.setColor(BACKGROUND_COLOUR);
+   myGLCD.fillRoundRect(200,30,315,60);           // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
+  myGLCD.setColor(TEXT_COLOUR);
+  myGLCD.drawRoundRect (205,65,310,95);
+  myGLCD.setFont(SmallFont);
+  
+  if (*irrigation==STANDBY)
+  {
+    myGLCD.print("AVVIA",235,65);                 // [FIDOCAD] FJC B 0.5 TY 235 65 12 8 0 0 12 * AVVIA
+    myGLCD.print("STANDBY",230,35);               // [FIDOCAD] FJC B 0.5 TY 230 35 12 8 0 0 12 * standby  
+    digitalWrite(RELAY_PIN,LOW);                  // stop irrigation
+  }
+  
+  else
+  {
+    myGLCD.print("STOP",240,65);                  // [FIDOCAD] FJC B 0.5 TY 240 65 12 8 0 0 12 * STOP
+    myGLCD.print("IRRIGAZIONE",210,30);           // [FIDOCAD] FJC B 0.5 TY 210 30 12 8 0 0 0 * irrigazione
+    myGLCD.print("IN CORSO...",210,45);           // [FIDOCAD] FJC B 0.5 TY 210 45 12 8 0 0 0 * in corso...
+    digitalWrite(RELAY_PIN,HIGH);                 // activate irrigation
+  }
+  myGLCD.print("IRRIGAZIONE",210,80);             //[FIDOCAD] FJC B 0.5 TY 210 80 12 8 0 0 12 * IRRIGAZIONE
+
+                   
+}
+
+void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+{
+  
+}
+
 void drawFrame_1stscreen()
 {
   //draw the lines of screen 1
@@ -70,30 +136,6 @@ void drawFrame_2ndscreen()
   myGLCD.print("inizio",55,160); 
   myGLCD.print("fine",225,160); 
 
-  //draw "AVVIA IRRIGAZIONE" button
-  myGLCD.setColor(BUTTON_COLOUR);
-  myGLCD.fillRoundRect(205,65,310,95);             //[FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
-  myGLCD.setColor(TEXT_COLOUR);
-  myGLCD.drawRoundRect (205,65,310,95);
-  myGLCD.setFont(SmallFont);
-  myGLCD.print("AVVIA",235,65);                   //[FIDOCAD] FJC B 0.5 TY 235 65 12 8 0 0 12 * AVVIA
-  myGLCD.print("IRRIGAZIONE",210,80);             //[FIDOCAD] FJC B 0.5 TY 210 80 12 8 0 0 12 * IRRIGAZIONE
-}
-  
-void drawButtons()
-{
-  
-}
-
-// Draw a red frame while a button is touched
-void waitForIt(int x1, int y1, int x2, int y2)
-{
-  myGLCD.setColor(255, 0, 0);
-  myGLCD.drawRoundRect (x1, y1, x2, y2);
-  while (myTouch.dataAvailable())
-    myTouch.read();
-  myGLCD.setColor(255, 255, 255);
-  myGLCD.drawRoundRect (x1, y1, x2, y2);
 }
 
 // Re-draw the time on LCD
@@ -132,9 +174,7 @@ void updateDisplayedTime(timedata_t* timedata)
       min_str[1]='0'+minutes%10;
     }
     min_str[2]='\0';
-  
-      ///////////////////////////////////////////TODO HERE///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+   
     // clear prevoius time displayed drawing two filled black rectangles
     myGLCD.setColor(BACKGROUND_COLOUR);
     myGLCD.fillRoundRect(10,28,85,90);
@@ -146,6 +186,17 @@ void updateDisplayedTime(timedata_t* timedata)
     myGLCD.print(hour_str,20,30);        //[FIDOCAD] FJC B 0.5 TY 20 30 50 32 0 0 0 Arial 23
     myGLCD.print(min_str,105,30);        //[FIDOCAD] FJC B 0.5 TY 105 30 50 32 0 0 0 Arial 59
   }
+}
+
+// Draw a red frame while a button is touched
+void waitForIt(int x1, int y1, int x2, int y2)
+{
+  myGLCD.setColor(255, 0, 0);
+  myGLCD.drawRoundRect (x1, y1, x2, y2);
+  while (myTouch.dataAvailable())
+    myTouch.read();
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.drawRoundRect (x1, y1, x2, y2);
 }
 
 //------------------------------- RTC & Time manipulation -----------------------------//
@@ -174,11 +225,30 @@ void updateDate(timedata_t* timedata)
 //    timedata->year = bcdToDec(Wire.read());
 }
 
+//------------------------------- Soil Moisture Sensor------------------------------------//
+// Update the value read by soil moisture sensor
+void updateSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+{
+  // read the value from the sensor:
+  uint16_t soilMoistureValue = analogRead(SOIL_MOISTURE_PIN);    
+  if(soilMoistureValue<SOILMOISTURE_LOWER_THRESHOLD)
+  {
+    *soilMoisture=DRY;
+  }
+  else if(soilMoistureValue>SOILMOISTURE_UPPER_THRESHOLD)
+  {
+    *soilMoisture=HUMID;
+  }
+  else
+  {
+    *soilMoisture=OK;
+  }
+}
+
 
 /**************************************************************************************************
-***                                 Required functions                                          ***
+***                                       Setup                                                ***
 **************************************************************************************************/
-
 
 void setup()
 {
@@ -186,6 +256,7 @@ void setup()
 
   // Only for debug purposes
   Serial.begin(9600);
+
 
   // Initialize display
   myGLCD.InitLCD();
@@ -199,24 +270,54 @@ void setup()
 
   // Initialize I2C & for RTC module
   Wire.begin();
+
+  // Initialize digital output (relay or pump)
+  pinMode(RELAY_PIN,OUTPUT);
   
   // Draw main screen
   drawFrame_1stscreen();
-  // Get RTC data
-  updateDate(&irrigaino_sts.timedata);
 
-  //ONLY FOR DEBUG !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  Serial.print(irrigaino_sts.timedata.time_hm.hours);
-  Serial.print(":");
-  Serial.print(irrigaino_sts.timedata.time_hm.minutes);
-  Serial.print("\n");
+  // Initialize irrigaino_sts global variable
+  updateDate(&irrigaino_sts.timedata);              // Get RTC data and update relative variable
+  updateSoilMoisture(&irrigaino_sts.soilMoisture);  // Get SoilMoisture data and update relative variable
+  irrigaino_sts.activeScreen=SCREEN_1;              // set active screen to 1st screen
+  irrigaino_sts.irrigation=STANDBY;                 // put irrigation status in standby 
+  irrigaino_sts.irrigationStart.hours=0;            // set irrigation start @ 00:00
+  irrigaino_sts.irrigationStart.minutes=0;
+  irrigaino_sts.irrigationEnd.hours=0;              // set irrigation end @ 00:00
+  irrigaino_sts.irrigationEnd.minutes=0;
 }
 
+
+/*******************************************************************************************************************************
+***                                                       MAIN LOOP                                                          ***
+*******************************************************************************************************************************/
 void loop()
-{
+{ 
   while (true)
   {
-    // Get RTC data
+    static status_t old_irrigaino_sts;  //contains old value of the system
+   
+  //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY---------------------------------------------------------------------
+  
+  Serial.print("please insert the irrigation status: 1 = avvia irrigazione, 0 = stop irigazione\n");
+  // Read serial input:
+    while (Serial.available() > 0) 
+    {
+      // read the incoming byte:
+      int incomingByte=Serial.read();
+      if (incomingByte==0x30) irrigaino_sts.irrigation=STANDBY;
+      if (incomingByte==0x31) irrigaino_sts.irrigation=UNDERWAY;
+    }
+  Serial.print("irrigaino_sts.irrigation: ");
+  Serial.println(irrigaino_sts.irrigation, DEC);
+
+  delay(1000);
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------
+    if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation);
+    
+    // Get RTC data 
     updateDate(&irrigaino_sts.timedata);
     // Update displayed time
     updateDisplayedTime(&irrigaino_sts.timedata);
@@ -326,6 +427,7 @@ void loop()
         }
       }
     }
+    old_irrigaino_sts=irrigaino_sts; // update the status of the system
   }
 }
 

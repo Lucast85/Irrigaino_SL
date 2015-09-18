@@ -1,0 +1,2 @@
+-design flowchart of the FW
+-add define with coordinates of buttons & strings to fast change sizes
