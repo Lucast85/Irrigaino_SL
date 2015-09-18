@@ -103,6 +103,26 @@ void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////
 {
   
 }
+// draw a 30*20 button with up arrow with upper left corner at point passed as parameter (x,y)
+void drawUpButton(uint8_t x,uint8_t y)
+{
+  myGLCD.setColor(EN_BUTTON_COLOUR);
+  myGLCD.fillRoundRect(x,y,x+30,y+20);
+  myGLCD.setColor(TEXT_COLOUR);
+  myGLCD.drawRoundRect(x,y,x+30,y+20);
+  myGLCD.drawLine(x+5,y+5,x+15,y+15);
+  myGLCD.drawLine(x+15,y+15,x+25,y+5);
+}
+// draw a 30*20 button with down arrow with upper left corner at point passed as parameter (x,y)
+void drawDownButton(uint8_t x,uint8_t y)
+{
+  myGLCD.setColor(EN_BUTTON_COLOUR);
+  myGLCD.fillRoundRect(x,y,x+30,y+20);
+  myGLCD.setColor(TEXT_COLOUR);
+  myGLCD.drawRoundRect(x,y,x+30,y+20);//RV 5 150
+  myGLCD.drawLine(x+5,y+5,x+15,y+15);//LI 10 155 20 165
+  myGLCD.drawLine(x+15,y+15,x+25,y+5);//LI 20 165 30 155
+}
 
 void drawCommonFrameObjects()
 {
@@ -144,8 +164,6 @@ void drawFrame_1stscreen()
   myGLCD.setFont(SmallFont);
   myGLCD.print("INFORMAZIONI",30,200);    //[FIDOCAD] FJC B 0.5 TY 30 200 12 8 0 0 12 * INFORMAZIONI
   myGLCD.print("PROGRAMMAZIONE",185,200); //[FIDOCAD] FJC B 0.5 TY 185 200 12 8 0 0 12 * PROGRAMMAZIONE
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
 }
 
 void drawFrame_2ndscreen()
@@ -339,10 +357,10 @@ void setup()
 *******************************************************************************************************************************/
 void loop()
 { 
+  static status_t old_irrigaino_sts;  //contains old value of the system
   while (true)
   {
-    static status_t old_irrigaino_sts;  //contains old value of the system
-   
+
   //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY---------------------------------------------------------------------
   
   Serial.print("please insert the irrigation status: 1 = avvia irrigazione, 0 = stop irigazione\n");
@@ -358,10 +376,12 @@ void loop()
   Serial.println(irrigaino_sts.irrigation, DEC);
 
   delay(1000);
+  drawDownButton(100,100);
   
   //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------
+  
     if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation);
-    
+      /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     // Get RTC data 
     updateDate(&irrigaino_sts.timedata);
     // Update displayed time
@@ -371,106 +391,7 @@ void loop()
     {
       myTouch.read();
       x=myTouch.getX();
-      y=myTouch.getY();
-      
-      if ((y>=10) && (y<=60))  // Upper row
-      {
-        if ((x>=10) && (x<=60))  // Button: 1
-        {
-          waitForIt(10, 10, 60, 60);
-          //updateStr('1');
-        }
-        if ((x>=70) && (x<=120))  // Button: 2
-        {
-          waitForIt(70, 10, 120, 60);
-          //updateStr('2');
-        }
-        if ((x>=130) && (x<=180))  // Button: 3
-        {
-          waitForIt(130, 10, 180, 60);
-          //updateStr('3');
-        }
-        if ((x>=190) && (x<=240))  // Button: 4
-        {
-          waitForIt(190, 10, 240, 60);
-          //updateStr('4');
-        }
-        if ((x>=250) && (x<=300))  // Button: 5
-        {
-          waitForIt(250, 10, 300, 60);
-          //updateStr('5');
-        }
-      }
-
-      if ((y>=70) && (y<=120))  // Center row
-      {
-        if ((x>=10) && (x<=60))  // Button: 6
-        {
-          waitForIt(10, 70, 60, 120);
-          //updateStr('6');
-        }
-        if ((x>=70) && (x<=120))  // Button: 7
-        {
-          waitForIt(70, 70, 120, 120);
-          //updateStr('7');
-        }
-        if ((x>=130) && (x<=180))  // Button: 8
-        {
-          waitForIt(130, 70, 180, 120);
-          //updateStr('8');
-        }
-        if ((x>=190) && (x<=240))  // Button: 9
-        {
-          waitForIt(190, 70, 240, 120);
-          //updateStr('9');
-        }
-        if ((x>=250) && (x<=300))  // Button: 0
-        {
-          waitForIt(250, 70, 300, 120);
-          //updateStr('0');
-        }
-      }
-
-      if ((y>=130) && (y<=180))  // Upper row
-      {
-        if ((x>=10) && (x<=150))  // Button: Clear
-        {
-          waitForIt(10, 130, 150, 180);
-          stCurrent[0]='\0';
-          stCurrentLen=0;
-          myGLCD.setColor(0, 0, 0);
-          myGLCD.fillRect(0, 224, 319, 239);
-        }
-        if ((x>=160) && (x<=300))  // Button: Enter
-        {
-          waitForIt(160, 130, 300, 180);
-          if (stCurrentLen>0)
-          {
-            for (x=0; x<stCurrentLen+1; x++)
-            {
-              stLast[x]=stCurrent[x];
-            }
-            stCurrent[0]='\0';
-            stCurrentLen=0;
-            myGLCD.setColor(0, 0, 0);
-            myGLCD.fillRect(0, 208, 319, 239);
-            myGLCD.setColor(0, 255, 0);
-            myGLCD.print(stLast, LEFT, 208);
-          }
-          else
-          {
-            myGLCD.setColor(255, 0, 0);
-            myGLCD.print("BUFFER EMPTY", CENTER, 192);
-            delay(500);
-            myGLCD.print("            ", CENTER, 192);
-            delay(500);
-            myGLCD.print("BUFFER EMPTY", CENTER, 192);
-            delay(500);
-            myGLCD.print("            ", CENTER, 192);
-            myGLCD.setColor(0, 255, 0);
-          }
-        }
-      }
+      y=myTouch.getY();  
     }
     old_irrigaino_sts=irrigaino_sts; // update the status of the system
   }
