@@ -14,10 +14,11 @@
 *************************************************************************************************/
 
 // define desired LCD colours
-#define FRAME_COLOUR      VGA_LIME
-#define BACKGROUND_COLOUR VGA_BLACK
-#define TEXT_COLOUR       VGA_WHITE
-#define BUTTON_COLOUR     VGA_GREEN
+#define FRAME_COLOUR        VGA_LIME
+#define BACKGROUND_COLOUR   VGA_BLACK
+#define TEXT_COLOUR         VGA_WHITE
+#define EN_BUTTON_COLOUR    VGA_GREEN
+#define DIS_BUTTON_COLOUR   43,85,43
 
 // RTC I2C address
 #define DS1307_ADDRESS    0x68
@@ -71,7 +72,7 @@ void updateDisplayedStatusAndButton(irrigation_t* irrigation)///////////////////
 {
   //draw "AVVIA/STOP IRRIGAZIONE" button & update text
   
-  myGLCD.setColor(BUTTON_COLOUR);
+  myGLCD.setColor(EN_BUTTON_COLOUR);
   myGLCD.fillRoundRect(205,65,310,95);            // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
   myGLCD.setColor(BACKGROUND_COLOUR);
    myGLCD.fillRoundRect(200,30,315,60);           // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
@@ -81,14 +82,14 @@ void updateDisplayedStatusAndButton(irrigation_t* irrigation)///////////////////
   
   if (*irrigation==STANDBY)
   {
-    myGLCD.print("AVVIA",235,65);                 // [FIDOCAD] FJC B 0.5 TY 235 65 12 8 0 0 12 * AVVIA
+    myGLCD.print("AVVIA",235,66);                 // [FIDOCAD] FJC B 0.5 TY 235 66 12 8 0 0 12 * AVVIA
     myGLCD.print("STANDBY",230,35);               // [FIDOCAD] FJC B 0.5 TY 230 35 12 8 0 0 12 * standby  
     digitalWrite(RELAY_PIN,LOW);                  // stop irrigation
   }
   
   else
   {
-    myGLCD.print("STOP",240,65);                  // [FIDOCAD] FJC B 0.5 TY 240 65 12 8 0 0 12 * STOP
+    myGLCD.print("STOP",240,66);                  // [FIDOCAD] FJC B 0.5 TY 240 66 12 8 0 0 12 * STOP
     myGLCD.print("IRRIGAZIONE",210,30);           // [FIDOCAD] FJC B 0.5 TY 210 30 12 8 0 0 0 * irrigazione
     myGLCD.print("IN CORSO...",210,45);           // [FIDOCAD] FJC B 0.5 TY 210 45 12 8 0 0 0 * in corso...
     digitalWrite(RELAY_PIN,HIGH);                 // activate irrigation
@@ -103,31 +104,72 @@ void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////
   
 }
 
-void drawFrame_1stscreen()
+void drawCommonFrameObjects()
 {
-  //draw the lines of screen 1
+  //draw the lines of the frame
   myGLCD.setColor(FRAME_COLOUR); 
-  myGLCD.drawLine(319,100,0,100);   //[FIDOCAD] LI 316 100 0 100 0
+  myGLCD.drawLine(319,100,0,100);   //[FIDOCAD] LI 319 100 0 100 0
   myGLCD.drawLine(195,0,195,100);   //[FIDOCAD] LI 195 0 195 100 0
   myGLCD.drawLine(319,175,0,175);   //[FIDOCAD] LI 319 175 0 175 0
   myGLCD.drawLine(160,175,160,239); //[FIDOCAD] LI 160 175 160 239 0
   myGLCD.drawRect(0,0,319,239);     //[FIDOCAD] RV 0 0 319 239 0
-  //draw the fixed text string of screen 1
+    //draw the fixed text string of screens 1 & 2
   myGLCD.setFont(BigFont);
   myGLCD.setColor(TEXT_COLOUR); 
   myGLCD.print("ORA ATTUALE",5,1); 
   myGLCD.print("STATO",215,1); 
+  // draw the colon between hours and minutes
   myGLCD.setFont(SmallFont);
-  myGLCD.print("INFORMAZIONI",30,200); 
-  myGLCD.print("PROGRAMMAZIONE",185,200);  
   myGLCD.print("o",95,40);                //[FIDOCAD] FJC B 0.5 TY 90 40 12 8 0 0 0 * o
   myGLCD.print("o",95,65);                //[FIDOCAD] FJC B 0.5 TY 90 65 12 8 0 0 0 * o
 }
 
+void drawFrame_1stscreen()
+{
+  drawCommonFrameObjects();
+  //clear 2nd and 3rd rows
+  myGLCD.setColor(BACKGROUND_COLOUR);
+  myGLCD.fillRoundRect(1,101,318,174);
+  myGLCD.fillRoundRect(10,185,145,230);   //[FIDOCAD] FJC B 0.5 RP 10 185 145 230 8
+  myGLCD.fillRoundRect(175,185,310,230);  //[FIDOCAD] FJC B 0.5 RP 175 185 310 230 7
+
+  //draw "informazioni" & "programmazione" buttons
+  myGLCD.setColor(DIS_BUTTON_COLOUR);     // informazioni button is disabled
+  myGLCD.fillRoundRect(10,185,145,230);   //[FIDOCAD] FJC B 0.5 RP 10 185 145 230 8
+  myGLCD.setColor(EN_BUTTON_COLOUR);      // programmazione button is enabled
+  myGLCD.fillRoundRect(175,185,310,230);  //[FIDOCAD] FJC B 0.5 RP 175 185 310 230 7
+  myGLCD.setColor(TEXT_COLOUR);
+  myGLCD.drawRoundRect (10,185,145,230);  //[FIDOCAD] FJC B 0.5 RV 10 185 145 230 12
+  myGLCD.drawRoundRect (175,185,310,230); //[FIDOCAD] FJC B 0.5 RV 175 185 310 230 12
+  myGLCD.setFont(SmallFont);
+  myGLCD.print("INFORMAZIONI",30,200);    //[FIDOCAD] FJC B 0.5 TY 30 200 12 8 0 0 12 * INFORMAZIONI
+  myGLCD.print("PROGRAMMAZIONE",185,200); //[FIDOCAD] FJC B 0.5 TY 185 200 12 8 0 0 12 * PROGRAMMAZIONE
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+}
+
 void drawFrame_2ndscreen()
 {
-  //draw the lines of screen 2
-  drawFrame_1stscreen();
+  drawCommonFrameObjects();
+  //clear 2nd and 3rd rows
+  myGLCD.setColor(BACKGROUND_COLOUR);
+  myGLCD.fillRoundRect(1,101,318,174);
+  myGLCD.fillRoundRect(10,185,145,230);   //[FIDOCAD] FJC B 0.5 RP 10 185 145 230 8
+  myGLCD.fillRoundRect(175,185,310,230);  //[FIDOCAD] FJC B 0.5 RP 175 185 310 230 7
+
+  //draw "informazioni" & "programmazione" buttons
+  myGLCD.setColor(EN_BUTTON_COLOUR);      // informazioni button is enabled
+  myGLCD.fillRoundRect(10,185,145,230);   //[FIDOCAD] FJC B 0.5 RP 10 185 145 230 8
+  myGLCD.setColor(DIS_BUTTON_COLOUR);     // programmazione button is disabled
+  myGLCD.fillRoundRect(175,185,310,230);  //[FIDOCAD] FJC B 0.5 RP 175 185 310 230 7
+  myGLCD.setColor(TEXT_COLOUR);
+  myGLCD.drawRoundRect (10,185,145,230);  //[FIDOCAD] FJC B 0.5 RV 10 185 145 230 12
+  myGLCD.drawRoundRect (175,185,310,230); //[FIDOCAD] FJC B 0.5 RV 175 185 310 230 12
+  myGLCD.setFont(SmallFont);
+  myGLCD.print("INFORMAZIONI",30,200);    //[FIDOCAD] FJC B 0.5 TY 30 200 12 8 0 0 12 * INFORMAZIONI
+  myGLCD.print("PROGRAMMAZIONE",185,200); //[FIDOCAD] FJC B 0.5 TY 185 200 12 8 0 0 12 * PROGRAMMAZIONE
+  
+  //draw centered vertical line of the frame
   myGLCD.setColor(FRAME_COLOUR); 
   myGLCD.drawLine(160,115,160,175);   //[FIDOCAD] LI 160 115 160 175 0
   //draw text of screen 2
@@ -135,7 +177,6 @@ void drawFrame_2ndscreen()
   myGLCD.print("IMPOSTAZIONI IRRIGAZIONE AUTOMATICA",15,101); 
   myGLCD.print("inizio",55,160); 
   myGLCD.print("fine",225,160); 
-
 }
 
 // Re-draw the time on LCD
@@ -286,7 +327,11 @@ void setup()
   irrigaino_sts.irrigationStart.minutes=0;
   irrigaino_sts.irrigationEnd.hours=0;              // set irrigation end @ 00:00
   irrigaino_sts.irrigationEnd.minutes=0;
+  
+  // Draw irrigation status and manual button 
+  updateDisplayedStatusAndButton(&irrigaino_sts.irrigation);
 }
+
 
 
 /*******************************************************************************************************************************
@@ -313,7 +358,7 @@ void loop()
   Serial.println(irrigaino_sts.irrigation, DEC);
 
   delay(1000);
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  
   //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------
     if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation);
     
