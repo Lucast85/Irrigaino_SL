@@ -34,13 +34,7 @@
 /**************************************************************************************************
 ***                                 Global Variables                                            ***
 **************************************************************************************************/
-
-String inString = "";    // string to hold input    // Only for Debug!!!
-
 int x, y;
-char stCurrent[20]="";
-int stCurrentLen=0;
-char stLast[20]="";
 status_t irrigaino_sts;
 
 // Declare which fonts we will be using
@@ -56,16 +50,69 @@ UTouch myTouch( 6, 5, 4, 3, 2);
 ***                                 Custom functions                                            ***
 **************************************************************************************************/
 
+//------------------------------- Other Functions------------------------------------//
+   
+// convert integer to 2-digit string
+void timeInt2timeStr(char* hours_str,char* mins_str,uint8_t hours,uint8_t minutes)
+{
+  if (hours<10)
+  {
+    hours_str[0]='0';
+    hours_str[1]='0'+hours;
+  }
+  else
+  {
+    hours_str[0]='0'+hours/10;
+    hours_str[1]='0'+hours%10;
+  }
+  hours_str[2]='\0';
+  
+  if (minutes<10)
+  {
+    mins_str[0]='0';
+    mins_str[1]='0'+minutes;
+  }
+  else
+  {
+    mins_str[0]='0'+minutes/10;
+    mins_str[1]='0'+minutes%10;
+  }
+  mins_str[2]='\0';
+  return;
+}
 
-//------------------------------- 3.2" TFT display -----------------------------//
+//------------------------------- 3.2" TFT display functions -----------------------------//
 
 void updateDisplayedIrrStartTime(time_hm_t* startTime)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
 {
+  //clear previous hours with black rectangle
+  myGLCD.setColor(BACKGROUND_COLOUR);
+  myGLCD.fillRect(36,125,124,155);  //[FIDOCAD] FJC B 0.5 RV 40 125 120 155 0
   
+  // update irrigation starting time
+  char hours_str[3], mins_str[3];
+  timeInt2timeStr(hours_str,mins_str,startTime->hours,startTime->minutes);
+  myGLCD.setFont(BigFont);
+  myGLCD.setColor(TEXT_COLOUR); 
+  myGLCD.print(hours_str,40,125);  //[FIDOCAD] FJC B 0.5 TY 40 125 16 16 0 0 0 * 00
+  myGLCD.print(":",73,125);        //[FIDOCAD] FJC B 0.5 TY 73 125 16 16 0 0 0 * :
+  myGLCD.print(mins_str,90,125);   //[FIDOCAD] FJC B 0.5 TY 90 125 16 16 0 0 0 * 01
 }
+
 void updateDisplayedIrrEndTime(time_hm_t* endTime)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
 {
-  
+  //clear previous hours with black rectangle
+  myGLCD.setColor(BACKGROUND_COLOUR);
+  myGLCD.fillRect(196,125,284,155);   //[FIDOCAD] FJC B 0.5 RV 200 125 280 155 0
+
+  // update irrigation ending time
+  char hours_str[3], mins_str[3];
+  timeInt2timeStr(hours_str,mins_str,endTime->hours,endTime->minutes);
+  myGLCD.setFont(BigFont);
+  myGLCD.setColor(TEXT_COLOUR); 
+  myGLCD.print(hours_str,200,125);  //[FIDOCAD] FJC B 0.5 TY 200 125 16 16 0 0 0 * 12
+  myGLCD.print(":",233,125);        //[FIDOCAD] FJC B 0.5 TY 233 125 16 16 0 0 0 * :
+  myGLCD.print(mins_str,250,125);   //[FIDOCAD] FJC B 0.5 TY 250 125 16 16 0 0 0 * 59
 }
 
 void updateDisplayedStatusAndButton(irrigation_t* irrigation)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
@@ -73,33 +120,33 @@ void updateDisplayedStatusAndButton(irrigation_t* irrigation)///////////////////
   //draw "AVVIA/STOP IRRIGAZIONE" button & update text
   
   myGLCD.setColor(EN_BUTTON_COLOUR);
-  myGLCD.fillRoundRect(205,65,310,95);            // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
+  myGLCD.fillRoundRect(205,65,310,95);      // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
   myGLCD.setColor(BACKGROUND_COLOUR);
-   myGLCD.fillRoundRect(200,30,315,60);           // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
+   myGLCD.fillRoundRect(200,30,315,60);     // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
   myGLCD.setColor(TEXT_COLOUR);
   myGLCD.drawRoundRect (205,65,310,95);
   myGLCD.setFont(SmallFont);
   
   if (*irrigation==STANDBY)
   {
-    myGLCD.print("AVVIA",235,66);                 // [FIDOCAD] FJC B 0.5 TY 235 66 12 8 0 0 12 * AVVIA
-    myGLCD.print("STANDBY",230,35);               // [FIDOCAD] FJC B 0.5 TY 230 35 12 8 0 0 12 * standby  
-    digitalWrite(RELAY_PIN,LOW);                  // stop irrigation
+    myGLCD.print("AVVIA",235,66);       // [FIDOCAD] FJC B 0.5 TY 235 66 12 8 0 0 12 * AVVIA
+    myGLCD.print("STANDBY",230,35);     // [FIDOCAD] FJC B 0.5 TY 230 35 12 8 0 0 12 * standby  
+    digitalWrite(RELAY_PIN,LOW);        // stop irrigation
   }
   
   else
   {
-    myGLCD.print("STOP",240,66);                  // [FIDOCAD] FJC B 0.5 TY 240 66 12 8 0 0 12 * STOP
-    myGLCD.print("IRRIGAZIONE",210,30);           // [FIDOCAD] FJC B 0.5 TY 210 30 12 8 0 0 0 * irrigazione
-    myGLCD.print("IN CORSO...",210,45);           // [FIDOCAD] FJC B 0.5 TY 210 45 12 8 0 0 0 * in corso...
-    digitalWrite(RELAY_PIN,HIGH);                 // activate irrigation
+    myGLCD.print("STOP",240,66);         // [FIDOCAD] FJC B 0.5 TY 240 66 12 8 0 0 12 * STOP
+    myGLCD.print("IRRIGAZIONE",210,30);  // [FIDOCAD] FJC B 0.5 TY 210 30 12 8 0 0 0 * irrigazione
+    myGLCD.print("IN CORSO...",210,45);  // [FIDOCAD] FJC B 0.5 TY 210 45 12 8 0 0 0 * in corso...
+    digitalWrite(RELAY_PIN,HIGH);        // activate irrigation
   }
-  myGLCD.print("IRRIGAZIONE",210,80);             //[FIDOCAD] FJC B 0.5 TY 210 80 12 8 0 0 12 * IRRIGAZIONE
+  myGLCD.print("IRRIGAZIONE",210,80);    // [FIDOCAD] FJC B 0.5 TY 210 80 12 8 0 0 12 * IRRIGAZIONE
 
                    
 }
 
-void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  WRITE  ME !!!  ////////////////////////////////////////////////////////////
 {
   
 }
@@ -110,8 +157,8 @@ void drawUpButton(uint8_t x,uint8_t y)
   myGLCD.fillRoundRect(x,y,x+30,y+20);
   myGLCD.setColor(TEXT_COLOUR);
   myGLCD.drawRoundRect(x,y,x+30,y+20);
-  myGLCD.drawLine(x+5,y+5,x+15,y+15);
-  myGLCD.drawLine(x+15,y+15,x+25,y+5);
+  myGLCD.drawLine(x+5,y+15,x+15,y+5);
+  myGLCD.drawLine(x+15,y+5,x+25,y+15);
 }
 // draw a 30*20 button with down arrow with upper left corner at point passed as parameter (x,y)
 void drawDownButton(uint8_t x,uint8_t y)
@@ -119,9 +166,9 @@ void drawDownButton(uint8_t x,uint8_t y)
   myGLCD.setColor(EN_BUTTON_COLOUR);
   myGLCD.fillRoundRect(x,y,x+30,y+20);
   myGLCD.setColor(TEXT_COLOUR);
-  myGLCD.drawRoundRect(x,y,x+30,y+20);//RV 5 150
-  myGLCD.drawLine(x+5,y+5,x+15,y+15);//LI 10 155 20 165
-  myGLCD.drawLine(x+15,y+15,x+25,y+5);//LI 20 165 30 155
+  myGLCD.drawRoundRect(x,y,x+30,y+20);  //RV 5 150
+  myGLCD.drawLine(x+5,y+5,x+15,y+15);   //LI 10 155 20 165
+  myGLCD.drawLine(x+15,y+15,x+25,y+5);  //LI 20 165 30 155
 }
 
 void drawCommonFrameObjects()
@@ -189,12 +236,22 @@ void drawFrame_2ndscreen()
   
   //draw centered vertical line of the frame
   myGLCD.setColor(FRAME_COLOUR); 
-  myGLCD.drawLine(160,115,160,175);   //[FIDOCAD] LI 160 115 160 175 0
+  myGLCD.drawLine(160,115,160,175);       //[FIDOCAD] LI 160 115 160 175 0
   //draw text of screen 2
   myGLCD.setColor(TEXT_COLOUR);
   myGLCD.print("IMPOSTAZIONI IRRIGAZIONE AUTOMATICA",15,101); 
   myGLCD.print("inizio",55,160); 
   myGLCD.print("fine",225,160); 
+
+  //draw the buttons (x8) to select start irrigation time & end irrigation time
+  drawUpButton(5,120);
+  drawUpButton(125,120);
+  drawUpButton(165,120);
+  drawUpButton(285,120);    /////////////////--------------------*******************************---------------_____________ FIX ME ________------------------*************************-------------------/////////////////////////
+  drawDownButton(5,150);
+  drawDownButton(125,150);
+  drawDownButton(165,150);
+  drawDownButton(285,150);  /////////////////--------------------*******************************---------------_____________ FIX ME ________------------------*************************-------------------/////////////////////////
 }
 
 // Re-draw the time on LCD
@@ -204,35 +261,10 @@ void updateDisplayedTime(timedata_t* timedata)
   static uint8_t hours;
   if((minutes!=timedata->time_hm.minutes)||(hours!=timedata->time_hm.hours))
   {
+    char hours_str[3], mins_str[3];
     minutes=timedata->time_hm.minutes;
     hours=timedata->time_hm.hours;
-    
-    char hour_str[3], min_str[3];
-    
-    //_____________convert integer to 2-digit string_________
-    if (hours<10)
-    {
-      hour_str[0]='0';
-      hour_str[1]='0'+hours;
-    }
-    else
-    {
-      hour_str[0]='0'+hours/10;
-      hour_str[1]='0'+hours%10;
-    }
-    hour_str[2]='\0';
-  
-    if (minutes<10)
-    {
-      min_str[0]='0';
-      min_str[1]='0'+minutes;
-    }
-    else
-    {
-      min_str[0]='0'+minutes/10;
-      min_str[1]='0'+minutes%10;
-    }
-    min_str[2]='\0';
+    timeInt2timeStr(hours_str,mins_str,hours,minutes);
    
     // clear prevoius time displayed drawing two filled black rectangles
     myGLCD.setColor(BACKGROUND_COLOUR);
@@ -242,8 +274,8 @@ void updateDisplayedTime(timedata_t* timedata)
     // draw actual time
     myGLCD.setColor(TEXT_COLOUR);
     myGLCD.setFont(SevenSegNumFont);
-    myGLCD.print(hour_str,20,30);        //[FIDOCAD] FJC B 0.5 TY 20 30 50 32 0 0 0 Arial 23
-    myGLCD.print(min_str,105,30);        //[FIDOCAD] FJC B 0.5 TY 105 30 50 32 0 0 0 Arial 59
+    myGLCD.print(hours_str,20,30);        //[FIDOCAD] FJC B 0.5 TY 20 30 50 32 0 0 0 Arial 23
+    myGLCD.print(mins_str,105,30);        //[FIDOCAD] FJC B 0.5 TY 105 30 50 32 0 0 0 Arial 59
   }
 }
 
@@ -258,7 +290,7 @@ void waitForIt(int x1, int y1, int x2, int y2)
   myGLCD.drawRoundRect (x1, y1, x2, y2);
 }
 
-//------------------------------- RTC & Time manipulation -----------------------------//
+//------------------------------- RTC & Time manipulation functions-----------------------------//
 
 // Convert binary coded decimal to normal decimal numbers
 byte bcdToDec(byte val)  
@@ -303,7 +335,6 @@ void updateSoilMoisture(soilmoisture_t* soilMoisture)///////////////////////////
     *soilMoisture=OK;
   }
 }
-
 
 /**************************************************************************************************
 ***                                       Setup                                                ***
@@ -363,21 +394,29 @@ void loop()
 
   //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY---------------------------------------------------------------------
   
-  Serial.print("please insert the irrigation status: 1 = avvia irrigazione, 0 = stop irigazione\n");
+//  Serial.print("please insert the irrigation status: 1 = avvia irrigazione, 0 = stop irigazione\n");
+//  // Read serial input:
+//    while (Serial.available() > 0) 
+//    {
+//      // read the incoming byte:
+//      int incomingByte=Serial.read();
+//      if (incomingByte==0x30) irrigaino_sts.irrigation=STANDBY;
+//      if (incomingByte==0x31) irrigaino_sts.irrigation=UNDERWAY;
+//    }
+//  Serial.print("irrigaino_sts.irrigation: ");
+//  Serial.println(irrigaino_sts.irrigation, DEC);
+
+  Serial.print("please insert desired screen: 1 or 2 \n");
   // Read serial input:
     while (Serial.available() > 0) 
     {
       // read the incoming byte:
       int incomingByte=Serial.read();
-      if (incomingByte==0x30) irrigaino_sts.irrigation=STANDBY;
-      if (incomingByte==0x31) irrigaino_sts.irrigation=UNDERWAY;
+      if (incomingByte==0x31) drawFrame_1stscreen();
+      if (incomingByte==0x32) drawFrame_2ndscreen();
     }
-  Serial.print("irrigaino_sts.irrigation: ");
-  Serial.println(irrigaino_sts.irrigation, DEC);
 
   delay(1000);
-  drawDownButton(100,100);
-  
   //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------
   
     if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation);
@@ -389,6 +428,7 @@ void loop()
 
     if (myTouch.dataAvailable())
     {
+      //**************************copia il codice di esempio sul touschscreen**********************
       myTouch.read();
       x=myTouch.getX();
       y=myTouch.getY();  
