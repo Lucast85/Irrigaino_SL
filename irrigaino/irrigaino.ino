@@ -151,7 +151,7 @@ void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////
   
 }
 // draw a 30*20 button with up arrow with upper left corner at point passed as parameter (x,y)
-void drawUpButton(uint8_t x,uint8_t y)
+void drawUpButton(uint16_t x,uint16_t y)
 {
   myGLCD.setColor(EN_BUTTON_COLOUR);
   myGLCD.fillRoundRect(x,y,x+30,y+20);
@@ -161,7 +161,7 @@ void drawUpButton(uint8_t x,uint8_t y)
   myGLCD.drawLine(x+15,y+5,x+25,y+15);
 }
 // draw a 30*20 button with down arrow with upper left corner at point passed as parameter (x,y)
-void drawDownButton(uint8_t x,uint8_t y)
+void drawDownButton(uint16_t x,uint16_t y)
 {
   myGLCD.setColor(EN_BUTTON_COLOUR);
   myGLCD.fillRoundRect(x,y,x+30,y+20);
