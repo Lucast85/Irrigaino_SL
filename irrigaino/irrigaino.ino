@@ -94,9 +94,9 @@ void updateDisplayedIrrStartTime(time_hm_t* startTime)//////////////////////////
   timeInt2timeStr(hours_str,mins_str,startTime->hours,startTime->minutes);
   myGLCD.setFont(BigFont);
   myGLCD.setColor(TEXT_COLOUR); 
-  myGLCD.print(hours_str,40,125);  //[FIDOCAD] FJC B 0.5 TY 40 125 16 16 0 0 0 * 00
-  myGLCD.print(":",73,125);        //[FIDOCAD] FJC B 0.5 TY 73 125 16 16 0 0 0 * :
-  myGLCD.print(mins_str,90,125);   //[FIDOCAD] FJC B 0.5 TY 90 125 16 16 0 0 0 * 01
+  myGLCD.print(hours_str,40,132);  //[FIDOCAD] FJC B 0.5 TY 40 125 16 16 0 0 0 * 00
+  myGLCD.print(":",73,132);        //[FIDOCAD] FJC B 0.5 TY 73 125 16 16 0 0 0 * :
+  myGLCD.print(mins_str,90,132);   //[FIDOCAD] FJC B 0.5 TY 90 125 16 16 0 0 0 * 01
 }
 
 void updateDisplayedIrrEndTime(time_hm_t* endTime)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
@@ -110,9 +110,9 @@ void updateDisplayedIrrEndTime(time_hm_t* endTime)//////////////////////////////
   timeInt2timeStr(hours_str,mins_str,endTime->hours,endTime->minutes);
   myGLCD.setFont(BigFont);
   myGLCD.setColor(TEXT_COLOUR); 
-  myGLCD.print(hours_str,200,125);  //[FIDOCAD] FJC B 0.5 TY 200 125 16 16 0 0 0 * 12
-  myGLCD.print(":",233,125);        //[FIDOCAD] FJC B 0.5 TY 233 125 16 16 0 0 0 * :
-  myGLCD.print(mins_str,250,125);   //[FIDOCAD] FJC B 0.5 TY 250 125 16 16 0 0 0 * 59
+  myGLCD.print(hours_str,200,132);  //[FIDOCAD] FJC B 0.5 TY 200 125 16 16 0 0 0 * 12
+  myGLCD.print(":",233,132);        //[FIDOCAD] FJC B 0.5 TY 233 125 16 16 0 0 0 * :
+  myGLCD.print(mins_str,250,132);   //[FIDOCAD] FJC B 0.5 TY 250 125 16 16 0 0 0 * 59
 }
 
 void updateDisplayedStatusAndButton(irrigation_t* irrigation)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
@@ -146,10 +146,25 @@ void updateDisplayedStatusAndButton(irrigation_t* irrigation)///////////////////
                    
 }
 
-void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  WRITE  ME !!!  ////////////////////////////////////////////////////////////
+void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
 {
-  
+  //clear previous value
+  myGLCD.setColor(BACKGROUND_COLOUR);
+  myGLCD.drawRect (205,165,315,110);      //[FIDOCAD] FJC B 0.5 RV 205 165 315 110 2
+  // draw actual value
+  myGLCD.setFont(BigFont);
+  myGLCD.setColor(TEXT_COLOUR);
+  if (*soilMoisture==DRY) 
+  {
+    myGLCD.print("SECCO",220,125);    //[FIDOCAD] FJC B 0.5 TY 220 125 16 16 0 0 12 * SECCO
+  }
+  else if (*soilMoisture==OK) 
+  {
+    myGLCD.print("OK",245,125);       //[FIDOCAD] FJC B 0.5 TY 245 125 16 16 0 0 12 * OK
+  }
+  else myGLCD.print("UMIDO",220,125); //[FIDOCAD] FJC B 0.5 TY 220 125 16 16 0 0 12 * UMIDO
 }
+
 // draw a 30*20 button with up arrow with upper left corner at point passed as parameter (x,y)
 void drawUpButton(uint16_t x,uint16_t y)
 {
@@ -211,6 +226,13 @@ void drawFrame_1stscreen()
   myGLCD.setFont(SmallFont);
   myGLCD.print("INFORMAZIONI",30,200);    //[FIDOCAD] FJC B 0.5 TY 30 200 12 8 0 0 12 * INFORMAZIONI
   myGLCD.print("PROGRAMMAZIONE",185,200); //[FIDOCAD] FJC B 0.5 TY 185 200 12 8 0 0 12 * PROGRAMMAZIONE
+
+  //draw "umidità del terreno"
+  myGLCD.setFont(BigFont);
+  myGLCD.print("UMIDITA'",5,110);//[FIDOCAD] FJC B 0.5 TY 5 110 16 16 0 0 12 * UMIDITA'
+  myGLCD.print("DEL TERRENO",5,135);//[FIDOCAD] FJC B 0.5 TY 5 135 16 16 0 0 12 * DEL TERRENO
+
+  updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);
 }
 
 void drawFrame_2ndscreen()
@@ -247,11 +269,14 @@ void drawFrame_2ndscreen()
   drawUpButton(5,120);
   drawUpButton(125,120);
   drawUpButton(165,120);
-  drawUpButton(285,120);    /////////////////--------------------*******************************---------------_____________ FIX ME ________------------------*************************-------------------/////////////////////////
+  drawUpButton(285,120);
   drawDownButton(5,150);
   drawDownButton(125,150);
   drawDownButton(165,150);
-  drawDownButton(285,150);  /////////////////--------------------*******************************---------------_____________ FIX ME ________------------------*************************-------------------/////////////////////////
+  drawDownButton(285,150);
+
+  updateDisplayedIrrStartTime(&irrigaino_sts.irrigationStart);
+  updateDisplayedIrrEndTime(&irrigaino_sts.irrigationEnd);
 }
 
 // Re-draw the time on LCD
