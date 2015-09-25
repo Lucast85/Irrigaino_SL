@@ -6,9 +6,10 @@
 // Emumerated that define the soil status: HUMID, OK or DRY
 typedef enum
 {
-  DRY=0,
-  OK=1,
-  HUMID=2,
+  DISCONNECTED=0,
+  DRY=1,
+  OK=2,
+  WATER=3,
 }soilmoisture_t;
 
 // Emumerated that define the active screen: SCREEN_1 or SCREEN_2

@@ -24,9 +24,18 @@
 #define DS1307_ADDRESS    0x68
 
 // Soil Moisture
-#define SOIL_MOISTURE_PIN                 0    //analog input pin of the sensor
-#define SOILMOISTURE_LOWER_THRESHOLD      350  //the lower moisture threshold
-#define SOILMOISTURE_UPPER_THRESHOLD      700  //the upper moisture threshold
+#define SOIL_MOISTURE_PIN                     A0   //analog input pin of the sensor
+
+/*
+*   SOIL MOISTURE THRESHOLDS:
+*   if (read value >= SOILMOISTURE_DISCONNECTED_THRESHOLD) the sensor is disconnected
+*   if (read value < SOILMOISTURE_DISCONNECTED_THRESHOLD && read value >= SOILMOISTURE_UPPER_THRESHOLD) soil is dry
+*   if (read value < SOILMOISTURE_UPPER_THRESHOLD && read value >= SOILMOISTURE_LOWER_THRESHOLD) soil is humid
+*   If (read value < SOILMOISTURE_LOWER_THRESHOLD) the sensor is in water
+*/
+#define SOILMOISTURE_LOWER_THRESHOLD          370  //the lower moisture threshold
+#define SOILMOISTURE_UPPER_THRESHOLD          600  //the upper moisture threshold
+#define SOILMOISTURE_DISCONNECTED_THRESHOLD   1000 //the lower soil moisture sensor threshold: is reed value is > of this value, the sensor maybe is disconnected
 
 // RELAY pin
 #define RELAY_PIN                         14    //the pin connected with the relay that control the water pump 
@@ -83,7 +92,35 @@ void timeInt2timeStr(char* hours_str,char* mins_str,uint8_t hours,uint8_t minute
 
 //------------------------------- 3.2" TFT display functions -----------------------------//
 
-void updateDisplayedIrrStartTime(time_hm_t* startTime)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+void blinkColon(timedata_t* timedata)
+{
+    static uint8_t second;
+    static bool graygize;
+    
+    if(second!=timedata->seconds)   // if seconds has been changed
+    {
+      if(graygize)
+      {
+        // Draw actual time colon 
+        myGLCD.setFont(SmallFont);
+        myGLCD.setColor(TEXT_COLOUR);
+        myGLCD.print("o",95,40);                //[FIDOCAD] FJC B 0.5 TY 90 40 12 8 0 0 0 * o
+        myGLCD.print("o",95,65);                //[FIDOCAD] FJC B 0.5 TY 90 65 12 8 0 0 0 * o
+      }
+      else
+      {
+        // Clear actual time colon 
+        myGLCD.setFont(SmallFont);
+        myGLCD.setColor(BACKGROUND_COLOUR);
+        myGLCD.print("o",95,40);                //[FIDOCAD] FJC B 0.5 TY 90 40 12 8 0 0 0 * o
+        myGLCD.print("o",95,65);                //[FIDOCAD] FJC B 0.5 TY 90 65 12 8 0 0 0 * o
+      }
+      graygize^=1;              // switch graygize
+      second=timedata->seconds; // update second value
+    }
+}
+
+void updateDisplayedIrrStartTime(time_hm_t* startTime)
 {
   //clear previous hours with black rectangle
   myGLCD.setColor(BACKGROUND_COLOUR);
@@ -99,7 +136,7 @@ void updateDisplayedIrrStartTime(time_hm_t* startTime)//////////////////////////
   myGLCD.print(mins_str,90,132);   //[FIDOCAD] FJC B 0.5 TY 90 125 16 16 0 0 0 * 01
 }
 
-void updateDisplayedIrrEndTime(time_hm_t* endTime)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+void updateDisplayedIrrEndTime(time_hm_t* endTime)
 {
   //clear previous hours with black rectangle
   myGLCD.setColor(BACKGROUND_COLOUR);
@@ -115,7 +152,7 @@ void updateDisplayedIrrEndTime(time_hm_t* endTime)//////////////////////////////
   myGLCD.print(mins_str,250,132);   //[FIDOCAD] FJC B 0.5 TY 250 125 16 16 0 0 0 * 59
 }
 
-void updateDisplayedStatusAndButton(irrigation_t* irrigation)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+void updateDisplayedStatusAndButton(irrigation_t* irrigation)
 {
   //draw "AVVIA/STOP IRRIGAZIONE" button & update text
   
@@ -146,23 +183,36 @@ void updateDisplayedStatusAndButton(irrigation_t* irrigation)///////////////////
                    
 }
 
-void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+void updateDisplayedSoilMoisture(soilmoisture_t* soilMoisture)
 {
   //clear previous value
   myGLCD.setColor(BACKGROUND_COLOUR);
-  myGLCD.drawRect (205,165,315,110);      //[FIDOCAD] FJC B 0.5 RV 205 165 315 110 2
+  myGLCD.fillRect (205,165,315,110);        //[FIDOCAD] FJC B 0.5 RV 205 165 315 110 2
   // draw actual value
   myGLCD.setFont(BigFont);
   myGLCD.setColor(TEXT_COLOUR);
-  if (*soilMoisture==DRY) 
+  if (*soilMoisture==DRY)                   // terreno secco 
   {
-    myGLCD.print("SECCO",220,125);    //[FIDOCAD] FJC B 0.5 TY 220 125 16 16 0 0 12 * SECCO
+    myGLCD.print("SECCO",220,125);          //[FIDOCAD] FJC B 0.5 TY 220 125 16 16 0 0 12 * SECCO
   }
-  else if (*soilMoisture==OK) 
+  else if (*soilMoisture==DISCONNECTED)     // sensore disconnesso
   {
-    myGLCD.print("OK",245,125);       //[FIDOCAD] FJC B 0.5 TY 245 125 16 16 0 0 12 * OK
+    myGLCD.setFont(SmallFont);
+    myGLCD.print("SENSORE",230,125);        //[FIDOCAD] FJC B 0.5 TY 230 125 12 8 0 0 12 * SENSORE
+    myGLCD.print("DISCONNESSO?",210,140);   //[FIDOCAD] FJC B 0.5 TY 210 140 12 8 0 0 12 * DISCONNESSO?
+   
   }
-  else myGLCD.print("UMIDO",220,125); //[FIDOCAD] FJC B 0.5 TY 220 125 16 16 0 0 12 * UMIDO
+  else if (*soilMoisture==OK)               // terreno OK
+  {
+    myGLCD.print("OK",245,125);             //[FIDOCAD] FJC B 0.5 TY 245 125 16 16 0 0 12 * OK
+  }
+  else                                      // sensore in acqua?
+  { 
+    myGLCD.setFont(SmallFont);
+    myGLCD.print("SENSORE",230,125);        //[FIDOCAD] FJC B 0.5 TY 230 125 12 8 0 0 12 * SENSORE 
+    myGLCD.print("IN ACQUA?",225,140);      //[FIDOCAD] FJC B 0.5 TY 225 140 12 8 0 0 12 * IN ACQUA?
+
+  }
 }
 
 // draw a 30*20 button with up arrow with upper left corner at point passed as parameter (x,y)
@@ -200,13 +250,13 @@ void drawCommonFrameObjects()
   myGLCD.setColor(TEXT_COLOUR); 
   myGLCD.print("ORA ATTUALE",5,1); 
   myGLCD.print("STATO",215,1); 
-  // draw the colon between hours and minutes
-  myGLCD.setFont(SmallFont);
-  myGLCD.print("o",95,40);                //[FIDOCAD] FJC B 0.5 TY 90 40 12 8 0 0 0 * o
-  myGLCD.print("o",95,65);                //[FIDOCAD] FJC B 0.5 TY 90 65 12 8 0 0 0 * o
+//  // draw the colon between hours and minutes
+//  myGLCD.setFont(SmallFont);
+//  myGLCD.print("o",95,40);                //[FIDOCAD] FJC B 0.5 TY 90 40 12 8 0 0 0 * o
+//  myGLCD.print("o",95,65);                //[FIDOCAD] FJC B 0.5 TY 90 65 12 8 0 0 0 * o
 }
 
-void drawFrame_1stscreen()
+void draw1stScreen()
 {
   drawCommonFrameObjects();
   //clear 2nd and 3rd rows
@@ -235,7 +285,7 @@ void drawFrame_1stscreen()
   updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);
 }
 
-void drawFrame_2ndscreen()
+void draw2ndScreen()
 {
   drawCommonFrameObjects();
   //clear 2nd and 3rd rows
@@ -282,6 +332,7 @@ void drawFrame_2ndscreen()
 // Re-draw the time on LCD
 void updateDisplayedTime(timedata_t* timedata)
 {
+  blinkColon(timedata);    // Blink colon between hours & minutes every second
   static uint8_t minutes;
   static uint8_t hours;
   if((minutes!=timedata->time_hm.minutes)||(hours!=timedata->time_hm.hours))
@@ -343,22 +394,23 @@ void updateDate(timedata_t* timedata)
 
 //------------------------------- Soil Moisture Sensor------------------------------------//
 // Update the value read by soil moisture sensor
-void updateSoilMoisture(soilmoisture_t* soilMoisture)//////////////////////////////////////////////////////////////////////  TEST  ME !!!  ////////////////////////////////////////////////////////////
+void updateSoilMoisture(soilmoisture_t* soilMoisture)
 {
   // read the value from the sensor:
-  uint16_t soilMoistureValue = analogRead(SOIL_MOISTURE_PIN);    
-  if(soilMoistureValue<SOILMOISTURE_LOWER_THRESHOLD)
+  uint16_t soilMoistureValue = analogRead(SOIL_MOISTURE_PIN);
+  if(soilMoistureValue >= SOILMOISTURE_DISCONNECTED_THRESHOLD)                                                          // the sensor is disconnected
+  {
+    *soilMoisture=DISCONNECTED;
+  }
+  else if(soilMoistureValue < SOILMOISTURE_DISCONNECTED_THRESHOLD && soilMoistureValue >= SOILMOISTURE_UPPER_THRESHOLD) // soil is dry
   {
     *soilMoisture=DRY;
   }
-  else if(soilMoistureValue>SOILMOISTURE_UPPER_THRESHOLD)
-  {
-    *soilMoisture=HUMID;
-  }
-  else
+  else if(soilMoistureValue < SOILMOISTURE_UPPER_THRESHOLD && soilMoistureValue >= SOILMOISTURE_LOWER_THRESHOLD)        // soil is OK 
   {
     *soilMoisture=OK;
   }
+  else *soilMoisture=WATER;  // then (soilMoistureValue < SOILMOISTURE_LOWER_THRESHOLD)                                 // the sensor is in water  
 }
 
 /**************************************************************************************************
@@ -371,8 +423,9 @@ void setup()
 
   // Only for debug purposes
   Serial.begin(9600);
-
-
+  
+  pinMode(SOIL_MOISTURE_PIN, INPUT); //set up Soil Moisture pin to be input
+  
   // Initialize display
   myGLCD.InitLCD();
   myGLCD.clrScr();
@@ -381,16 +434,16 @@ void setup()
   
   // Initialize touchscreen
   myTouch.InitTouch();
-  myTouch.setPrecision(PREC_HI);
+  myTouch.setPrecision(PREC_MEDIUM);
 
-  // Initialize I2C & for RTC module
+  // Initialize I2C for RTC module
   Wire.begin();
 
   // Initialize digital output (relay or pump)
   pinMode(RELAY_PIN,OUTPUT);
   
   // Draw main screen
-  drawFrame_1stscreen();
+  draw1stScreen();
 
   // Initialize irrigaino_sts global variable
   updateDate(&irrigaino_sts.timedata);              // Get RTC data and update relative variable
@@ -415,10 +468,12 @@ void loop()
 { 
   static status_t old_irrigaino_sts;  //contains old value of the system
   while (true)
-  {
+  {  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
 
-  //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY---------------------------------------------------------------------
-  
+  //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY--------------------------------------------------------------------
+      updateSoilMoisture(&irrigaino_sts.soilMoisture);
+      updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);
+      
 //  Serial.print("please insert the irrigation status: 1 = avvia irrigazione, 0 = stop irigazione\n");
 //  // Read serial input:
 //    while (Serial.available() > 0) 
@@ -437,19 +492,35 @@ void loop()
     {
       // read the incoming byte:
       int incomingByte=Serial.read();
-      if (incomingByte==0x31) drawFrame_1stscreen();
-      if (incomingByte==0x32) drawFrame_2ndscreen();
+      if (incomingByte==0x31)
+      {
+        draw1stScreen();
+        irrigaino_sts.irrigation=STANDBY;
+      }
+      if (incomingByte==0x32) 
+      {
+        draw2ndScreen();
+        irrigaino_sts.irrigation=UNDERWAY;
+      }
     }
-
+  
   delay(1000);
   //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------
-  
-    if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation);
-      /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
     // Get RTC data 
     updateDate(&irrigaino_sts.timedata);
     // Update displayed time
     updateDisplayedTime(&irrigaino_sts.timedata);
+    
+    if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation); // if irrigation status is changed update it
+    if(old_irrigaino_sts.activeScreen!=irrigaino_sts.activeScreen)  // if selected screen is changed update displayed screen 
+    {
+      if(irrigaino_sts.activeScreen==SCREEN_1) draw1stScreen();   // draw 1st screen
+      else draw2ndScreen();                                       // draw 2nd screen
+    }
+    
+
+
 
     if (myTouch.dataAvailable())
     {
