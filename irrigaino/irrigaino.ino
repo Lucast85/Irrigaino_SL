@@ -427,6 +427,54 @@ void checkPressedBtn_screen2(status_t* irrigaino_sts)
           waitForIt(205,65,310,95); 
           irrigaino_sts->irrigation=(irrigation_t)(irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
         }
+
+
+          if((y>=120) && (y<=140))   // up & down button: lower row  // the buttons are 30x20 pixels
+          {
+            if((x>=5) && (x<=35))
+            {
+              waitForIt(5,120,35,140);
+            }
+            if((x>=125) && (x<=155))
+            {
+              waitForIt(125,120,155,140);
+            }
+            if((x>=165) && (x<=195))
+            {
+              waitForIt(165,120,195,140);
+            }
+            if((x>=285) && (x<=315))
+            {
+              waitForIt(285,120,315,140);
+            }                                    
+//  drawUpButton(5,120);
+//  drawUpButton(125,120);
+//  drawUpButton(165,120);
+//  drawUpButton(285,120);
+//  drawDownButton(5,150);
+//  drawDownButton(125,150);
+//  drawDownButton(165,150);
+//  drawDownButton(285,150);
+          }
+          if((y>=150) && (y<=170))   // up & down button: lower row  // the buttons are 30x20 pixels
+          {
+            if((x>=5) && (x<=35))
+            {
+              waitForIt(5,150,35,170);
+            }
+            if((x>=125) && (x<=155))
+            {
+              waitForIt(125,150,155,170);
+            }
+            if((x>=165) && (x<=195))
+            {
+              waitForIt(165,150,195,170);
+            }
+            if((x>=285) && (x<=315))
+            {
+              waitForIt(285,150,315,170);
+            }             
+          }
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
       }
 }
@@ -584,11 +632,11 @@ void loop()
       if(irrigaino_sts.activeScreen==SCREEN_1) draw1stScreen();   // draw 1st screen
       else draw2ndScreen();                                       // draw 2nd screen
     }
-
+    old_irrigaino_sts=irrigaino_sts; // update the status of the system
     checkPressedBtn_screen1(&irrigaino_sts);
     checkPressedBtn_screen2(&irrigaino_sts);
         
-    old_irrigaino_sts=irrigaino_sts; // update the status of the system
+
   }
 }
 
