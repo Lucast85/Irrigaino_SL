@@ -19,6 +19,7 @@
 #define TEXT_COLOUR         VGA_WHITE
 #define EN_BUTTON_COLOUR    VGA_GREEN
 #define DIS_BUTTON_COLOUR   43,85,43
+#define BUTTON_PRESSED_COLOUR VGA_BLUE
 
 // RTC I2C address
 #define DS1307_ADDRESS    0x68
@@ -159,7 +160,7 @@ void updateDisplayedStatusAndButton(irrigation_t* irrigation)
   myGLCD.setColor(EN_BUTTON_COLOUR);
   myGLCD.fillRoundRect(205,65,310,95);      // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
   myGLCD.setColor(BACKGROUND_COLOUR);
-   myGLCD.fillRoundRect(200,30,315,60);     // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
+   myGLCD.fillRect(200,30,315,60);          // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
   myGLCD.setColor(TEXT_COLOUR);
   myGLCD.drawRoundRect (205,65,310,95);
   myGLCD.setFont(SmallFont);
@@ -355,17 +356,82 @@ void updateDisplayedTime(timedata_t* timedata)
   }
 }
 
-// Draw a red frame while a button is touched
+
+
+//------------------------------------- Touchscreen functions-----------------------------------//
+
+// Draw a coloured frame while a button is touched
 void waitForIt(int x1, int y1, int x2, int y2)
 {
-  myGLCD.setColor(255, 0, 0);
+  myGLCD.setColor(BUTTON_PRESSED_COLOUR);
   myGLCD.drawRoundRect (x1, y1, x2, y2);
   while (myTouch.dataAvailable())
     myTouch.read();
-  myGLCD.setColor(255, 255, 255);
+  myGLCD.setColor(TEXT_COLOUR);
   myGLCD.drawRoundRect (x1, y1, x2, y2);
 }
 
+void checkPressedBtn_screen1(status_t* irrigaino_sts)
+{
+  if (myTouch.dataAvailable())
+      {
+        myTouch.read();
+        x=myTouch.getX();
+        y=myTouch.getY();  
+        
+        if ((y>=185) && (y<=230))   // Lower row
+        {
+//          if ((x>=10) && (x<=145))  // "INFORMAZIONI" button  //[FIDOCAD] FJC B 0.5 RV 10 185 145 230 12
+//          {
+//            waitForIt(10,185,145,230);
+//            irrigaino_sts->activeScreen=SCREEN_1;
+//          }
+          if ((x>=175) && (x<=310)) // "PROGRAMMAZIONE" button  //[FIDOCAD] FJC B 0.5 RV 175 185 310 230 12
+          {
+            waitForIt(175,185,310,230);             
+            irrigaino_sts->activeScreen=SCREEN_2;   // change active Screen value to SCREEN_2
+          }
+        }
+        if ((y>=65 ) && (y<=95 ) && (x>=205) && (x<=310))   // "AVVIA/STOP IRRIGAZIONE" button  // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
+        {
+          waitForIt(205,65,310,95); 
+          irrigaino_sts->irrigation=(irrigation_t)(irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
+        }
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
+      }
+}
+
+void checkPressedBtn_screen2(status_t* irrigaino_sts)
+{
+  if (myTouch.dataAvailable())
+      {
+        myTouch.read();
+        x=myTouch.getX();
+        y=myTouch.getY();  
+        
+        if ((y>=185) && (y<=230))   // Lower row
+        {
+          if ((x>=10) && (x<=145))  // "INFORMAZIONI" button  //[FIDOCAD] FJC B 0.5 RV 10 185 145 230 12
+          {
+            waitForIt(10,185,145,230);
+            irrigaino_sts->activeScreen=SCREEN_1;
+          }
+//          if ((x>=175) && (x<=310)) // "PROGRAMMAZIONE" button  //[FIDOCAD] FJC B 0.5 RV 175 185 310 230 12
+//          {
+//            waitForIt(175,185,310,230);             
+//            irrigaino_sts->activeScreen=SCREEN_2;   // change active Screen value to SCREEN_2
+//          }
+        }
+        if ((y>=65 ) && (y<=95 ) && (x>=205) && (x<=310))   // "AVVIA/STOP IRRIGAZIONE" button  // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
+        {
+          waitForIt(205,65,310,95); 
+          irrigaino_sts->irrigation=(irrigation_t)(irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
+        }
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
+      }
+}
+
+    
 //------------------------------- RTC & Time manipulation functions-----------------------------//
 
 // Convert binary coded decimal to normal decimal numbers
@@ -471,9 +537,9 @@ void loop()
   {  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
 
   //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY--------------------------------------------------------------------
-      updateSoilMoisture(&irrigaino_sts.soilMoisture);
-      updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);
-      
+//      updateSoilMoisture(&irrigaino_sts.soilMoisture);
+//      updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);
+//      
 //  Serial.print("please insert the irrigation status: 1 = avvia irrigazione, 0 = stop irigazione\n");
 //  // Read serial input:
 //    while (Serial.available() > 0) 
@@ -486,25 +552,25 @@ void loop()
 //  Serial.print("irrigaino_sts.irrigation: ");
 //  Serial.println(irrigaino_sts.irrigation, DEC);
 
-  Serial.print("please insert desired screen: 1 or 2 \n");
-  // Read serial input:
-    while (Serial.available() > 0) 
-    {
-      // read the incoming byte:
-      int incomingByte=Serial.read();
-      if (incomingByte==0x31)
-      {
-        draw1stScreen();
-        irrigaino_sts.irrigation=STANDBY;
-      }
-      if (incomingByte==0x32) 
-      {
-        draw2ndScreen();
-        irrigaino_sts.irrigation=UNDERWAY;
-      }
-    }
-  
-  delay(1000);
+//  Serial.print("please insert desired screen: 1 or 2 \n");
+//  // Read serial input:
+//    while (Serial.available() > 0) 
+//    {
+//      // read the incoming byte:
+//      int incomingByte=Serial.read();
+//      if (incomingByte==0x31)
+//      {
+//        draw1stScreen();
+//        irrigaino_sts.irrigation=STANDBY;
+//      }
+//      if (incomingByte==0x32) 
+//      {
+//        draw2ndScreen();
+//        irrigaino_sts.irrigation=UNDERWAY;
+//      }
+//    }
+//  
+//  delay(1000);
   //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------
 
     // Get RTC data 
@@ -518,17 +584,10 @@ void loop()
       if(irrigaino_sts.activeScreen==SCREEN_1) draw1stScreen();   // draw 1st screen
       else draw2ndScreen();                                       // draw 2nd screen
     }
-    
 
-
-
-    if (myTouch.dataAvailable())
-    {
-      //**************************copia il codice di esempio sul touschscreen**********************
-      myTouch.read();
-      x=myTouch.getX();
-      y=myTouch.getY();  
-    }
+    checkPressedBtn_screen1(&irrigaino_sts);
+    checkPressedBtn_screen2(&irrigaino_sts);
+        
     old_irrigaino_sts=irrigaino_sts; // update the status of the system
   }
 }
