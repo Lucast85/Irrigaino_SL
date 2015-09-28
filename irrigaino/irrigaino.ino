@@ -121,7 +121,7 @@ void blinkColon(timedata_t* timedata)
     }
 }
 
-void updateDisplayedIrrStartTime(time_hm_t* startTime)
+void updateDisplayedIrrStartTime(status_t* l_irrigaino_sts)
 {
   //clear previous hours with black rectangle
   myGLCD.setColor(BACKGROUND_COLOUR);
@@ -129,7 +129,7 @@ void updateDisplayedIrrStartTime(time_hm_t* startTime)
   
   // update irrigation starting time
   char hours_str[3], mins_str[3];
-  timeInt2timeStr(hours_str,mins_str,startTime->hours,startTime->minutes);
+  timeInt2timeStr(hours_str,mins_str,l_irrigaino_sts->irrigationStart.hours,l_irrigaino_sts->irrigationStart.minutes);
   myGLCD.setFont(BigFont);
   myGLCD.setColor(TEXT_COLOUR); 
   myGLCD.print(hours_str,40,132);  //[FIDOCAD] FJC B 0.5 TY 40 125 16 16 0 0 0 * 00
@@ -137,7 +137,7 @@ void updateDisplayedIrrStartTime(time_hm_t* startTime)
   myGLCD.print(mins_str,90,132);   //[FIDOCAD] FJC B 0.5 TY 90 125 16 16 0 0 0 * 01
 }
 
-void updateDisplayedIrrEndTime(time_hm_t* endTime)
+void updateDisplayedIrrEndTime(status_t* l_irrigaino_sts)
 {
   //clear previous hours with black rectangle
   myGLCD.setColor(BACKGROUND_COLOUR);
@@ -145,7 +145,7 @@ void updateDisplayedIrrEndTime(time_hm_t* endTime)
 
   // update irrigation ending time
   char hours_str[3], mins_str[3];
-  timeInt2timeStr(hours_str,mins_str,endTime->hours,endTime->minutes);
+  timeInt2timeStr(hours_str,mins_str,l_irrigaino_sts->irrigationEnd.hours,l_irrigaino_sts->irrigationEnd.minutes);
   myGLCD.setFont(BigFont);
   myGLCD.setColor(TEXT_COLOUR); 
   myGLCD.print(hours_str,200,132);  //[FIDOCAD] FJC B 0.5 TY 200 125 16 16 0 0 0 * 12
@@ -326,8 +326,8 @@ void draw2ndScreen()
   drawDownButton(165,150);
   drawDownButton(285,150);
 
-  updateDisplayedIrrStartTime(&irrigaino_sts.irrigationStart);
-  updateDisplayedIrrEndTime(&irrigaino_sts.irrigationEnd);
+  updateDisplayedIrrStartTime(&irrigaino_sts);
+  updateDisplayedIrrEndTime(&irrigaino_sts);
 }
 
 // Re-draw the time on LCD
@@ -371,7 +371,7 @@ void waitForIt(int x1, int y1, int x2, int y2)
   myGLCD.drawRoundRect (x1, y1, x2, y2);
 }
 
-void checkPressedBtn_screen1(status_t* irrigaino_sts)
+void checkPressedBtn_screen1(status_t* l_irrigaino_sts)
 {
   if (myTouch.dataAvailable())
       {
@@ -384,24 +384,23 @@ void checkPressedBtn_screen1(status_t* irrigaino_sts)
 //          if ((x>=10) && (x<=145))  // "INFORMAZIONI" button  //[FIDOCAD] FJC B 0.5 RV 10 185 145 230 12
 //          {
 //            waitForIt(10,185,145,230);
-//            irrigaino_sts->activeScreen=SCREEN_1;
+//            l_irrigaino_sts->activeScreen=SCREEN_1;
 //          }
           if ((x>=175) && (x<=310)) // "PROGRAMMAZIONE" button  //[FIDOCAD] FJC B 0.5 RV 175 185 310 230 12
           {
             waitForIt(175,185,310,230);             
-            irrigaino_sts->activeScreen=SCREEN_2;   // change active Screen value to SCREEN_2
+            l_irrigaino_sts->activeScreen=SCREEN_2;   // change active Screen value to SCREEN_2
           }
         }
         if ((y>=65 ) && (y<=95 ) && (x>=205) && (x<=310))   // "AVVIA/STOP IRRIGAZIONE" button  // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
         {
           waitForIt(205,65,310,95); 
-          irrigaino_sts->irrigation=(irrigation_t)(irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
+          l_irrigaino_sts->irrigation=(irrigation_t)(l_irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
         }
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
       }
 }
 
-void checkPressedBtn_screen2(status_t* irrigaino_sts)
+void checkPressedBtn_screen2(status_t* l_irrigaino_sts)
 {
   if (myTouch.dataAvailable())
       {
@@ -414,7 +413,7 @@ void checkPressedBtn_screen2(status_t* irrigaino_sts)
           if ((x>=10) && (x<=145))  // "INFORMAZIONI" button  //[FIDOCAD] FJC B 0.5 RV 10 185 145 230 12
           {
             waitForIt(10,185,145,230);
-            irrigaino_sts->activeScreen=SCREEN_1;
+            l_irrigaino_sts->activeScreen=SCREEN_1;
           }
 //          if ((x>=175) && (x<=310)) // "PROGRAMMAZIONE" button  //[FIDOCAD] FJC B 0.5 RV 175 185 310 230 12
 //          {
@@ -425,57 +424,61 @@ void checkPressedBtn_screen2(status_t* irrigaino_sts)
         if ((y>=65 ) && (y<=95 ) && (x>=205) && (x<=310))   // "AVVIA/STOP IRRIGAZIONE" button  // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
         {
           waitForIt(205,65,310,95); 
-          irrigaino_sts->irrigation=(irrigation_t)(irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
+          l_irrigaino_sts->irrigation=(irrigation_t)(l_irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
         }
-
-
-          if((y>=120) && (y<=140))   // up & down button: lower row  // the buttons are 30x20 pixels
+        
+        if((y>=120) && (y<=140))   // up & down button: upper row  // the buttons are 30x20 pixels
+        {
+          if((x>=5) && (x<=35))         // +1h Start irrigation time
           {
-            if((x>=5) && (x<=35))
-            {
-              waitForIt(5,120,35,140);
-            }
-            if((x>=125) && (x<=155))
-            {
-              waitForIt(125,120,155,140);
-            }
-            if((x>=165) && (x<=195))
-            {
-              waitForIt(165,120,195,140);
-            }
-            if((x>=285) && (x<=315))
-            {
-              waitForIt(285,120,315,140);
-            }                                    
-//  drawUpButton(5,120);
-//  drawUpButton(125,120);
-//  drawUpButton(165,120);
-//  drawUpButton(285,120);
-//  drawDownButton(5,150);
-//  drawDownButton(125,150);
-//  drawDownButton(165,150);
-//  drawDownButton(285,150);
+            waitForIt(5,120,35,140);
+            l_irrigaino_sts->irrigationStart.hours = (l_irrigaino_sts->irrigationStart.hours + 1) % 24;
           }
-          if((y>=150) && (y<=170))   // up & down button: lower row  // the buttons are 30x20 pixels
+          if((x>=125) && (x<=155))      // +1m Start irrigation time
           {
-            if((x>=5) && (x<=35))
-            {
-              waitForIt(5,150,35,170);
-            }
-            if((x>=125) && (x<=155))
-            {
-              waitForIt(125,150,155,170);
-            }
-            if((x>=165) && (x<=195))
-            {
-              waitForIt(165,150,195,170);
-            }
-            if((x>=285) && (x<=315))
-            {
-              waitForIt(285,150,315,170);
-            }             
+            waitForIt(125,120,155,140);
+            l_irrigaino_sts->irrigationStart.minutes = (l_irrigaino_sts->irrigationStart.minutes + 1) % 60;
           }
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
+          if((x>=165) && (x<=195))      // +1h End irrigation time
+          {
+            waitForIt(165,120,195,140);
+            l_irrigaino_sts->irrigationEnd.hours = (l_irrigaino_sts->irrigationEnd.hours + 1) % 24;
+          }
+          if((x>=285) && (x<=315))      // +1m End irrigation time
+          {
+            waitForIt(285,120,315,140);
+            l_irrigaino_sts->irrigationEnd.minutes = (l_irrigaino_sts->irrigationEnd.minutes + 1) % 60;
+          }                                    
+        }
+        if((y>=150) && (y<=170))   // up & down button: lower row  // the buttons are 30x20 pixels
+        {
+          if((x>=5) && (x<=35))         // -1h Start irrigation time
+          {
+            waitForIt(5,150,35,170);
+            if(l_irrigaino_sts->irrigationStart.hours == 0) l_irrigaino_sts->irrigationStart.hours = 24 ;
+            l_irrigaino_sts->irrigationStart.hours = (l_irrigaino_sts->irrigationStart.hours - 1) % 24;
+          }
+          if((x>=125) && (x<=155))      // -1m Start irrigation time
+          {
+            waitForIt(125,150,155,170);
+            if(l_irrigaino_sts->irrigationStart.minutes == 0) l_irrigaino_sts->irrigationStart.minutes = 60 ;
+            l_irrigaino_sts->irrigationStart.minutes = (l_irrigaino_sts->irrigationStart.minutes - 1) % 60;
+          }
+          if((x>=165) && (x<=195))      // -1h End irrigation time
+          {
+            waitForIt(165,150,195,170);
+            if(l_irrigaino_sts->irrigationEnd.hours == 0) l_irrigaino_sts->irrigationEnd.hours = 24 ;
+            l_irrigaino_sts->irrigationEnd.hours = (l_irrigaino_sts->irrigationEnd.hours - 1) % 24;
+          }
+          if((x>=285) && (x<=315))      // -1m End irrigation time
+          {
+            waitForIt(285,150,315,170);
+            if(l_irrigaino_sts->irrigationEnd.minutes == 0) l_irrigaino_sts->irrigationEnd.minutes = 60 ;
+            l_irrigaino_sts->irrigationEnd.minutes = (l_irrigaino_sts->irrigationEnd.minutes - 1) % 60;
+          }             
+        }
+        if(x>159) updateDisplayedIrrEndTime(l_irrigaino_sts);
+        else updateDisplayedIrrStartTime(l_irrigaino_sts);
       }
 }
 
@@ -528,7 +531,7 @@ void updateSoilMoisture(soilmoisture_t* soilMoisture)
 }
 
 /**************************************************************************************************
-***                                       Setup                                                ***
+***                                       Setup                                                 ***
 **************************************************************************************************/
 
 void setup()
