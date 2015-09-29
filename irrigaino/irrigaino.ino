@@ -25,7 +25,8 @@
 #define DS1307_ADDRESS    0x68
 
 // Soil Moisture
-#define SOIL_MOISTURE_PIN                     A0   //analog input pin of the sensor
+#define SOIL_MOISTURE_PIN     A0  //analog input pin of the sensor
+#define FILTER_SHIFT          4   // the parameter K of LPF
 
 /*
 *   SOIL MOISTURE THRESHOLDS:
@@ -433,21 +434,25 @@ void checkPressedBtn_screen2(status_t* l_irrigaino_sts)
           {
             waitForIt(5,120,35,140);
             l_irrigaino_sts->irrigationStart.hours = (l_irrigaino_sts->irrigationStart.hours + 1) % 24;
+            updateDisplayedIrrStartTime(l_irrigaino_sts);
           }
           if((x>=125) && (x<=155))      // +1m Start irrigation time
           {
             waitForIt(125,120,155,140);
             l_irrigaino_sts->irrigationStart.minutes = (l_irrigaino_sts->irrigationStart.minutes + 1) % 60;
+            updateDisplayedIrrStartTime(l_irrigaino_sts);
           }
           if((x>=165) && (x<=195))      // +1h End irrigation time
           {
             waitForIt(165,120,195,140);
             l_irrigaino_sts->irrigationEnd.hours = (l_irrigaino_sts->irrigationEnd.hours + 1) % 24;
+            updateDisplayedIrrEndTime(l_irrigaino_sts);
           }
           if((x>=285) && (x<=315))      // +1m End irrigation time
           {
             waitForIt(285,120,315,140);
             l_irrigaino_sts->irrigationEnd.minutes = (l_irrigaino_sts->irrigationEnd.minutes + 1) % 60;
+            updateDisplayedIrrEndTime(l_irrigaino_sts);
           }                                    
         }
         if((y>=150) && (y<=170))   // up & down button: lower row  // the buttons are 30x20 pixels
@@ -457,28 +462,30 @@ void checkPressedBtn_screen2(status_t* l_irrigaino_sts)
             waitForIt(5,150,35,170);
             if(l_irrigaino_sts->irrigationStart.hours == 0) l_irrigaino_sts->irrigationStart.hours = 24 ;
             l_irrigaino_sts->irrigationStart.hours = (l_irrigaino_sts->irrigationStart.hours - 1) % 24;
+            updateDisplayedIrrStartTime(l_irrigaino_sts);
           }
           if((x>=125) && (x<=155))      // -1m Start irrigation time
           {
             waitForIt(125,150,155,170);
             if(l_irrigaino_sts->irrigationStart.minutes == 0) l_irrigaino_sts->irrigationStart.minutes = 60 ;
             l_irrigaino_sts->irrigationStart.minutes = (l_irrigaino_sts->irrigationStart.minutes - 1) % 60;
+            updateDisplayedIrrStartTime(l_irrigaino_sts);
           }
           if((x>=165) && (x<=195))      // -1h End irrigation time
           {
             waitForIt(165,150,195,170);
             if(l_irrigaino_sts->irrigationEnd.hours == 0) l_irrigaino_sts->irrigationEnd.hours = 24 ;
             l_irrigaino_sts->irrigationEnd.hours = (l_irrigaino_sts->irrigationEnd.hours - 1) % 24;
+            updateDisplayedIrrEndTime(l_irrigaino_sts);
           }
           if((x>=285) && (x<=315))      // -1m End irrigation time
           {
             waitForIt(285,150,315,170);
             if(l_irrigaino_sts->irrigationEnd.minutes == 0) l_irrigaino_sts->irrigationEnd.minutes = 60 ;
             l_irrigaino_sts->irrigationEnd.minutes = (l_irrigaino_sts->irrigationEnd.minutes - 1) % 60;
+            updateDisplayedIrrEndTime(l_irrigaino_sts);
           }             
         }
-        if(x>159) updateDisplayedIrrEndTime(l_irrigaino_sts);
-        else updateDisplayedIrrStartTime(l_irrigaino_sts);
       }
 }
 
@@ -513,8 +520,16 @@ void updateDate(timedata_t* timedata)
 // Update the value read by soil moisture sensor
 void updateSoilMoisture(soilmoisture_t* soilMoisture)
 {
-  // read the value from the sensor:
-  uint16_t soilMoistureValue = analogRead(SOIL_MOISTURE_PIN);
+  
+  // Simple LPF to soil moisture sensor: more informations into: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
+  int32_t filter_reg;         // delay element
+  int16_t filter_input;       // filter_input
+  int16_t soilMoistureValue;  // filter output
+  
+  filter_input = analogRead(SOIL_MOISTURE_PIN);  //read input
+  filter_reg = filter_reg - (filter_reg >> FILTER_SHIFT) + filter_input;  //update filter with current sample
+  soilMoistureValue = filter_reg >> FILTER_SHIFT;  //scale output for unity gain
+
   if(soilMoistureValue >= SOILMOISTURE_DISCONNECTED_THRESHOLD)                                                          // the sensor is disconnected
   {
     *soilMoisture=DISCONNECTED;
@@ -626,6 +641,8 @@ void loop()
 
     // Get RTC data 
     updateDate(&irrigaino_sts.timedata);
+    // Get Soil moisture status
+    updateSoilMoisture(&irrigaino_sts.soilMoisture);
     // Update displayed time
     updateDisplayedTime(&irrigaino_sts.timedata);
     
@@ -636,8 +653,8 @@ void loop()
       else draw2ndScreen();                                       // draw 2nd screen
     }
     old_irrigaino_sts=irrigaino_sts; // update the status of the system
-    checkPressedBtn_screen1(&irrigaino_sts);
-    checkPressedBtn_screen2(&irrigaino_sts);
+    if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);
+    else checkPressedBtn_screen2(&irrigaino_sts);
         
 
   }
