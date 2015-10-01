@@ -25,7 +25,8 @@
 #define DS1307_ADDRESS    0x68
 
 // Soil Moisture
-#define SOIL_MOISTURE_PIN     A0  //analog input pin of the sensor
+#define SOIL_MOISTURE_PIN     A0  // analog input pin of the sensor
+#define LPF                   1   // If 1 Low Pass Filter is active. If 0, LPF is inactive.
 #define FILTER_SHIFT          4   // the parameter K of LPF
 
 /*
@@ -520,16 +521,19 @@ void updateDate(timedata_t* timedata)
 // Update the value read by soil moisture sensor
 void updateSoilMoisture(soilmoisture_t* soilMoisture)
 {
-  
-  // Simple LPF to soil moisture sensor: more informations into: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
-  int32_t filter_reg;         // delay element
+  #if LPF
+  // Simple LPF to soil moisture sensor: more informations in http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
+  static int32_t filter_reg;  // delay element
   int16_t filter_input;       // filter_input
   int16_t soilMoistureValue;  // filter output
   
   filter_input = analogRead(SOIL_MOISTURE_PIN);  //read input
   filter_reg = filter_reg - (filter_reg >> FILTER_SHIFT) + filter_input;  //update filter with current sample
   soilMoistureValue = filter_reg >> FILTER_SHIFT;  //scale output for unity gain
-
+  #else
+  uint16_t soilMoistureValue = analogRead(SOIL_MOISTURE_PIN);  //read input
+  #endif
+  
   if(soilMoistureValue >= SOILMOISTURE_DISCONNECTED_THRESHOLD)                                                          // the sensor is disconnected
   {
     *soilMoisture=DISCONNECTED;
@@ -645,15 +649,37 @@ void loop()
     updateSoilMoisture(&irrigaino_sts.soilMoisture);
     // Update displayed time
     updateDisplayedTime(&irrigaino_sts.timedata);
-    
+    // Update irrigation status
     if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation); // if irrigation status is changed update it
+    // check active screen and update all values into the screen (if they've been changed)
+    if(irrigaino_sts.activeScreen)  // screen 2 active!
+    {
+      if( (old_irrigaino_sts.irrigationStart.hours!=irrigaino_sts.irrigationStart.hours) || (old_irrigaino_sts.irrigationStart.minutes!=irrigaino_sts.irrigationStart.minutes) )
+        updateDisplayedIrrStartTime(&irrigaino_sts);      //start irrigation time has changed, update it
+      if( (old_irrigaino_sts.irrigationEnd.hours!=irrigaino_sts.irrigationEnd.hours) || (old_irrigaino_sts.irrigationEnd.minutes!=irrigaino_sts.irrigationEnd.minutes) )
+        updateDisplayedIrrEndTime(&irrigaino_sts);        //end irrigation time has changed, update it
+    }
+    else                            // screen 1 active!
+    {
+      if(old_irrigaino_sts.soilMoisture!=irrigaino_sts.soilMoisture) updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);  //if soilmoisture has changed, update it
+    }
+
+    
+    if(old_irrigaino_sts.timedata.time_hm.minutes != irrigaino_sts.timedata.time_hm.minutes)  // a new minute has expired
+    {
+      
+    }
+    
+
+   
     if(old_irrigaino_sts.activeScreen!=irrigaino_sts.activeScreen)  // if selected screen is changed update displayed screen 
     {
       if(irrigaino_sts.activeScreen==SCREEN_1) draw1stScreen();   // draw 1st screen
       else draw2ndScreen();                                       // draw 2nd screen
     }
     old_irrigaino_sts=irrigaino_sts; // update the status of the system
-    if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);
+    
+    if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);   // check if a button is pressed on screen 1 or on screen 2
     else checkPressedBtn_screen2(&irrigaino_sts);
         
 
