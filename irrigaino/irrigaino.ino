@@ -27,7 +27,7 @@
 // Soil Moisture
 #define SOIL_MOISTURE_PIN     A0  // analog input pin of the sensor
 #define LPF                   1   // If 1 Low Pass Filter is active. If 0, LPF is inactive.
-#define FILTER_SHIFT          4   // the parameter K of LPF
+#define FILTER_SHIFT          8   // the parameter K of LPF
 
 /*
 *   SOIL MOISTURE THRESHOLDS:
@@ -602,6 +602,8 @@ void setup()
 *******************************************************************************************************************************/
 void loop()
 { 
+  bool irrigationStartTimeExpired=false;
+  bool irrigationEndTimeExpired=false;
   static status_t old_irrigaino_sts;  //contains old value of the system
   while (true)
   {  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
@@ -651,6 +653,14 @@ void loop()
     updateDisplayedTime(&irrigaino_sts.timedata);
     // Update irrigation status
     if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation); // if irrigation status is changed update it
+    
+    // if selected screen is changed update displayed screen 
+    if(old_irrigaino_sts.activeScreen!=irrigaino_sts.activeScreen)      
+    {
+      if(irrigaino_sts.activeScreen) draw2ndScreen();    // draw 2nd screen
+      else draw1stScreen();                              // draw 1st screen                                    
+    }
+
     // check active screen and update all values into the screen (if they've been changed)
     if(irrigaino_sts.activeScreen)  // screen 2 active!
     {
@@ -667,21 +677,27 @@ void loop()
     
     if(old_irrigaino_sts.timedata.time_hm.minutes != irrigaino_sts.timedata.time_hm.minutes)  // a new minute has expired
     {
-      
+      if( (irrigaino_sts.timedata.time_hm.hours == irrigaino_sts.irrigationStart.hours) && (irrigaino_sts.timedata.time_hm.minutes == irrigaino_sts.irrigationStart.minutes) )  // irrigation start time is now!
+      irrigationStartTimeExpired=true;     
+      if( (irrigaino_sts.timedata.time_hm.hours == irrigaino_sts.irrigationEnd.hours) && (irrigaino_sts.timedata.time_hm.minutes == irrigaino_sts.irrigationEnd.minutes) )      // irrigation end time is now!
+      irrigationEndTimeExpired=true;
     }
-    
 
-   
-    if(old_irrigaino_sts.activeScreen!=irrigaino_sts.activeScreen)  // if selected screen is changed update displayed screen 
-    {
-      if(irrigaino_sts.activeScreen==SCREEN_1) draw1stScreen();   // draw 1st screen
-      else draw2ndScreen();                                       // draw 2nd screen
-    }
     old_irrigaino_sts=irrigaino_sts; // update the status of the system
+
+    if(irrigationStartTimeExpired)
+    {
+      irrigaino_sts.irrigation=UNDERWAY;  // turn on irrigation
+      irrigationStartTimeExpired=false;   // reset flag
+    }
+    if(irrigationEndTimeExpired)
+    {
+      irrigaino_sts.irrigation=STANDBY;   // turn off irrigation
+      irrigationEndTimeExpired=false;     // reset flag
+    }
     
     if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);   // check if a button is pressed on screen 1 or on screen 2
     else checkPressedBtn_screen2(&irrigaino_sts);
-        
 
   }
 }
