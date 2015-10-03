@@ -26,6 +26,8 @@ typedef enum
   UNDERWAY=1,
 }irrigation_t;
 
+typedef bool manualIrrBtn_t;  // 1 if it is pressed; 0 if not
+
 // struct datatype holding all main information of irrigaino
 typedef struct
 {
@@ -35,6 +37,7 @@ typedef struct
   soilmoisture_t soilMoisture;  // the soil moisture status
   activescreen_t activeScreen;  // the active screen on LCD
   irrigation_t irrigation;      // the irrigation status
+  manualIrrBtn_t manualIrrBtn;  // the status of manual irrigation button
 }status_t;
 
 #endif  /* STATUS_H_*/

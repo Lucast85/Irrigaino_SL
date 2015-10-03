@@ -14,12 +14,14 @@
 *************************************************************************************************/
 
 // define desired LCD colours
-#define FRAME_COLOUR        VGA_LIME
-#define BACKGROUND_COLOUR   VGA_BLACK
-#define TEXT_COLOUR         VGA_WHITE
-#define EN_BUTTON_COLOUR    VGA_GREEN
-#define DIS_BUTTON_COLOUR   43,85,43
-#define BUTTON_PRESSED_COLOUR VGA_BLUE
+#define FRAME_COLOUR                VGA_LIME
+#define BACKGROUND_COLOUR           VGA_BLACK
+#define TEXT_COLOUR                 VGA_WHITE
+#define EN_BUTTON_COLOUR            VGA_GREEN
+#define MANUAL_ON_EN_BUTTON_COLOUR  VGA_NAVY
+#define DIS_BUTTON_COLOUR           43,85,43
+#define BUTTON_PRESSED_COLOUR       VGA_BLUE
+
 
 // RTC I2C address
 #define DS1307_ADDRESS    0x68
@@ -155,14 +157,14 @@ void updateDisplayedIrrEndTime(status_t* l_irrigaino_sts)
   myGLCD.print(mins_str,250,132);   //[FIDOCAD] FJC B 0.5 TY 250 125 16 16 0 0 0 * 59
 }
 
-void updateDisplayedStatusAndButton(irrigation_t* irrigation)
+void updateDisplayedStatusAndButton(irrigation_t* irrigation, manualIrrBtn_t* manualIrrBtn)
 {
   //draw "AVVIA/STOP IRRIGAZIONE" button & update text
-  
-  myGLCD.setColor(EN_BUTTON_COLOUR);
+  if(*manualIrrBtn) myGLCD.setColor(MANUAL_ON_EN_BUTTON_COLOUR);
+  else myGLCD.setColor(EN_BUTTON_COLOUR);
   myGLCD.fillRoundRect(205,65,310,95);      // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
   myGLCD.setColor(BACKGROUND_COLOUR);
-   myGLCD.fillRect(200,30,315,60);          // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
+  myGLCD.fillRect(200,30,315,60);          // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
   myGLCD.setColor(TEXT_COLOUR);
   myGLCD.drawRoundRect (205,65,310,95);
   myGLCD.setFont(SmallFont);
@@ -253,10 +255,6 @@ void drawCommonFrameObjects()
   myGLCD.setColor(TEXT_COLOUR); 
   myGLCD.print("ORA ATTUALE",5,1); 
   myGLCD.print("STATO",215,1); 
-//  // draw the colon between hours and minutes
-//  myGLCD.setFont(SmallFont);
-//  myGLCD.print("o",95,40);                //[FIDOCAD] FJC B 0.5 TY 90 40 12 8 0 0 0 * o
-//  myGLCD.print("o",95,65);                //[FIDOCAD] FJC B 0.5 TY 90 65 12 8 0 0 0 * o
 }
 
 void draw1stScreen()
@@ -397,7 +395,8 @@ void checkPressedBtn_screen1(status_t* l_irrigaino_sts)
         if ((y>=65 ) && (y<=95 ) && (x>=205) && (x<=310))   // "AVVIA/STOP IRRIGAZIONE" button  // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
         {
           waitForIt(205,65,310,95); 
-          l_irrigaino_sts->irrigation=(irrigation_t)(l_irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
+          l_irrigaino_sts->irrigation=(irrigation_t)(l_irrigaino_sts->irrigation^1);          // switch between irrigation ON & OFF
+          l_irrigaino_sts->manualIrrBtn = (manualIrrBtn_t)(l_irrigaino_sts->manualIrrBtn^true);  // switch between button pressed ON & OFF
         }
       }
 }
@@ -427,6 +426,7 @@ void checkPressedBtn_screen2(status_t* l_irrigaino_sts)
         {
           waitForIt(205,65,310,95); 
           l_irrigaino_sts->irrigation=(irrigation_t)(l_irrigaino_sts->irrigation^1);   // switch between irrigation ON & OFF
+          l_irrigaino_sts->manualIrrBtn = (manualIrrBtn_t)(l_irrigaino_sts->manualIrrBtn^1);  // switch between button pressed ON & OFF
         }
         
         if((y>=120) && (y<=140))   // up & down button: upper row  // the buttons are 30x20 pixels
@@ -592,7 +592,7 @@ void setup()
   irrigaino_sts.irrigationEnd.minutes=0;
   
   // Draw irrigation status and manual button 
-  updateDisplayedStatusAndButton(&irrigaino_sts.irrigation);
+  updateDisplayedStatusAndButton(&irrigaino_sts.irrigation, &irrigaino_sts.manualIrrBtn);
 }
 
 
@@ -608,7 +608,7 @@ void loop()
   while (true)
   {  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
 
-  //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY--------------------------------------------------------------------
+//-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY--------------------------------------------------------------------
 //      updateSoilMoisture(&irrigaino_sts.soilMoisture);
 //      updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);
 //      
@@ -623,7 +623,7 @@ void loop()
 //    }
 //  Serial.print("irrigaino_sts.irrigation: ");
 //  Serial.println(irrigaino_sts.irrigation, DEC);
-
+//
 //  Serial.print("please insert desired screen: 1 or 2 \n");
 //  // Read serial input:
 //    while (Serial.available() > 0) 
@@ -641,9 +641,10 @@ void loop()
 //        irrigaino_sts.irrigation=UNDERWAY;
 //      }
 //    }
-//  
-//  delay(1000);
-  //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------
+//  if (irrigaino_sts.manualIrrBtn) 
+  if(irrigaino_sts.manualIrrBtn==1)
+  Serial.print("irrigaino_sts.manualIrrBtn==1 !!!\n");
+//-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------*/
 
     // Get RTC data 
     updateDate(&irrigaino_sts.timedata);
@@ -652,7 +653,7 @@ void loop()
     // Update displayed time
     updateDisplayedTime(&irrigaino_sts.timedata);
     // Update irrigation status
-    if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation); // if irrigation status is changed update it
+    if(old_irrigaino_sts.irrigation!=irrigaino_sts.irrigation) updateDisplayedStatusAndButton(&irrigaino_sts.irrigation , &irrigaino_sts.manualIrrBtn); // if irrigation status is changed update it
     
     // if selected screen is changed update displayed screen 
     if(old_irrigaino_sts.activeScreen!=irrigaino_sts.activeScreen)      
