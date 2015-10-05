@@ -18,7 +18,7 @@
 #define BACKGROUND_COLOUR           VGA_BLACK
 #define TEXT_COLOUR                 VGA_WHITE
 #define EN_BUTTON_COLOUR            VGA_GREEN
-#define MANUAL_ON_EN_BUTTON_COLOUR  VGA_NAVY
+#define MANUAL_ON_EN_BUTTON_COLOUR  VGA_TEAL
 #define DIS_BUTTON_COLOUR           43,85,43
 #define BUTTON_PRESSED_COLOUR       VGA_BLUE
 
@@ -604,6 +604,7 @@ void loop()
 { 
   bool irrigationStartTimeExpired=false;
   bool irrigationEndTimeExpired=false;
+  bool autoIrrigation=false;
   static status_t old_irrigaino_sts;  //contains old value of the system
   while (true)
   {  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
@@ -642,8 +643,11 @@ void loop()
 //      }
 //    }
 //  if (irrigaino_sts.manualIrrBtn) 
-  if(irrigaino_sts.manualIrrBtn==1)
-  Serial.print("irrigaino_sts.manualIrrBtn==1 !!!\n");
+//
+//
+//
+//  if(irrigaino_sts.manualIrrBtn==1)
+//  Serial.print("irrigaino_sts.manualIrrBtn==1 !!!\n");
 //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------*/
 
     // Get RTC data 
@@ -687,16 +691,27 @@ void loop()
     old_irrigaino_sts=irrigaino_sts; // update the status of the system
 
     if(irrigationStartTimeExpired)
-    {
-      irrigaino_sts.irrigation=UNDERWAY;  // turn on irrigation
+    {      
       irrigationStartTimeExpired=false;   // reset flag
+      autoIrrigation = true;              // set another flag
     }
     if(irrigationEndTimeExpired)
     {
-      irrigaino_sts.irrigation=STANDBY;   // turn off irrigation
       irrigationEndTimeExpired=false;     // reset flag
+      autoIrrigation = false;             // reset flag
+      irrigaino_sts.irrigation=STANDBY;   // turn off irrigation
+      irrigaino_sts.manualIrrBtn = false; // test me & rimuovi la parte commentata nella riga sopra
+      updateDisplayedStatusAndButton(&irrigaino_sts.irrigation, &irrigaino_sts.manualIrrBtn);
+      // leggi lo stato attuale e, se era forced, ripristina lo stato e mantieni colorato di azzurro il btn
     }
-    
+// *********************************************TEST ME, PLEASE !!! *****************************************************************************************************************************DELETE THIS PART ?
+    if((autoIrrigation == true) && (irrigaino_sts.manualIrrBtn == false))
+    {
+      if (irrigaino_sts.soilMoisture == DRY) irrigaino_sts.irrigation=UNDERWAY;  // turn on irrigation
+      else irrigaino_sts.irrigation=STANDBY;   // turn off irrigation
+    }
+// *********************************************TEST ME, PLEASE !!! *****************************************************************************************************************************
+
     if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);   // check if a button is pressed on screen 1 or on screen 2
     else checkPressedBtn_screen2(&irrigaino_sts);
 
