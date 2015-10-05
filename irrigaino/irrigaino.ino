@@ -690,27 +690,25 @@ void loop()
 
     old_irrigaino_sts=irrigaino_sts; // update the status of the system
 
-    if(irrigationStartTimeExpired)
+    if(irrigationStartTimeExpired)        // executed only when actual time match irrigation start time
     {      
       irrigationStartTimeExpired=false;   // reset flag
       autoIrrigation = true;              // set another flag
     }
-    if(irrigationEndTimeExpired)
+    if(irrigationEndTimeExpired)          // executed only when actual time match irrigation end time
     {
       irrigationEndTimeExpired=false;     // reset flag
       autoIrrigation = false;             // reset flag
-      irrigaino_sts.irrigation=STANDBY;   // turn off irrigation
-      irrigaino_sts.manualIrrBtn = false; // test me & rimuovi la parte commentata nella riga sopra
+      if(irrigaino_sts.manualIrrBtn == false) irrigaino_sts.irrigation=STANDBY;   // turn off irrigation
+      if ((irrigaino_sts.manualIrrBtn == true) && (irrigaino_sts.irrigation==STANDBY)) irrigaino_sts.manualIrrBtn = false;    //if irrigation was forced, when IrrEndTime expired, then colour the button in green
       updateDisplayedStatusAndButton(&irrigaino_sts.irrigation, &irrigaino_sts.manualIrrBtn);
-      // leggi lo stato attuale e, se era forced, ripristina lo stato e mantieni colorato di azzurro il btn
     }
-// *********************************************TEST ME, PLEASE !!! *****************************************************************************************************************************DELETE THIS PART ?
-    if((autoIrrigation == true) && (irrigaino_sts.manualIrrBtn == false))
+
+    if((autoIrrigation == true) && (irrigaino_sts.manualIrrBtn == false))       // update automatic irrigation status according to soil moisture level
     {
-      if (irrigaino_sts.soilMoisture == DRY) irrigaino_sts.irrigation=UNDERWAY;  // turn on irrigation
-      else irrigaino_sts.irrigation=STANDBY;   // turn off irrigation
+      if (irrigaino_sts.soilMoisture == DRY) irrigaino_sts.irrigation=UNDERWAY;   // turn on irrigation if soil is dry
+      else irrigaino_sts.irrigation=STANDBY;                                      // turn off irrigation if soil isn't dry (OK, sensor disconnected or in water)
     }
-// *********************************************TEST ME, PLEASE !!! *****************************************************************************************************************************
 
     if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);   // check if a button is pressed on screen 1 or on screen 2
     else checkPressedBtn_screen2(&irrigaino_sts);
