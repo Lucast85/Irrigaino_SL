@@ -8,6 +8,8 @@
 #include <SPI.h>            // SPI driver for SD card & ethernet module 
 #include <SD.h>             // SD library
 #include <UIPEthernet.h>    // Ethernet library
+#include <UIPServer.h>
+#include <UIPClient.h>
 
 #include "time.h"
 #include "status.h"
@@ -30,7 +32,7 @@
 #define REQ_BUF_SZ        60                                // size of buffer used to capture HTTP requests
 #define TXT_BUF_SZ        3
 #define MAC_ADDRESS       {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}   // the MAC address of ethernet interface
-#define IP_ADDRESS        192,168,10,6                      // IP address, may need to change depending on network
+#define IP_ADDRESS        192,168,1,75                      // IP address, may need to change depending on network
 #define SERVER_PORT       80                                // the port of the server  
 // to change the CS pin of ethernet module (ENC28J60), define it in Enc28J60Network.h (overwrite SS with desired pin number, 15 in this application)  
 
@@ -69,8 +71,8 @@ status_t irrigaino_sts;
   // MAC, IP & PORT
 const uint8_t MAC[] = MAC_ADDRESS;
 IPAddress ip(IP_ADDRESS);             // IP address, may need to change depending on network
-EthernetServer server(SERVER_PORT);   // create a server at port SERVER_PORT=80
-
+//EthernetServer server(SERVER_PORT);   // create a server at port SERVER_PORT=80
+EthernetServer server = EthernetServer(SERVER_PORT);  // create a server at port SERVER_PORT=80
 
   // HTTP buffer
 char HTTP_req[REQ_BUF_SZ] = {0};  // buffered HTTP request stored as null terminated string
@@ -790,7 +792,7 @@ void setup()
   delay(800);
   myGLCD.clrScr();
   
-//  // initialize ethernet
+  // initialize ethernet
   Ethernet.begin(MAC, ip);  // initialize Ethernet device
   server.begin();           // start to listen for clients
 
