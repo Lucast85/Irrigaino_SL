@@ -2,9 +2,12 @@
 ***                           INCLUDE HEADER FILES                                            ***
 ************************************************************************************************/
 
-#include <Wire.h>   //I2C driver for RTC
-#include <UTFT.h>   //TFT driver for SSD1289
-#include <UTouch.h> //Touchscreen driver for XPT2046
+#include <Wire.h>           // I2C driver for RTC
+#include <UTFT.h>           // TFT driver for SSD1289
+#include <UTouch.h>         // Touchscreen driver for XPT2046
+#include <SPI.h>            // SPI driver for SD card & ethernet module 
+#include <SD.h>             // SD library
+#include <UIPEthernet.h>    // Ethernet library
 
 #include "time.h"
 #include "status.h"
@@ -13,7 +16,7 @@
 ***                                 DEFINE                                                     ***
 *************************************************************************************************/
 
-// define desired LCD colours
+// desired LCD colours
 #define FRAME_COLOUR                VGA_LIME
 #define BACKGROUND_COLOUR           VGA_BLACK
 #define TEXT_COLOUR                 VGA_WHITE
@@ -21,7 +24,18 @@
 #define MANUAL_ON_EN_BUTTON_COLOUR  VGA_TEAL
 #define DIS_BUTTON_COLOUR           43,85,43
 #define BUTTON_PRESSED_COLOUR       VGA_BLUE
+#define ALERT_COLOUR                VGA_RED
 
+// Ethernet 
+#define REQ_BUF_SZ        60                                // size of buffer used to capture HTTP requests
+#define TXT_BUF_SZ        3
+#define MAC_ADDRESS       {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}   // the MAC address of ethernet interface
+#define IP_ADDRESS        192,168,10,6                      // IP address, may need to change depending on network
+#define SERVER_PORT       80                                // the port of the server  
+// to change the CS pin of ethernet module (ENC28J60), define it in Enc28J60Network.h (overwrite SS with desired pin number, 15 in this application)  
+
+// SD card
+#define SDCARD_CS_PIN     53
 
 // RTC I2C address
 #define DS1307_ADDRESS    0x68
@@ -43,7 +57,7 @@
 #define SOILMOISTURE_DISCONNECTED_THRESHOLD   1000 //the lower soil moisture sensor threshold: is reed value is > of this value, the sensor maybe is disconnected
 
 // RELAY pin
-#define RELAY_PIN                         14    //the pin connected with the relay that control the water pump 
+#define RELAY_PIN                         14       //the pin connected with the relay that control the water pump
 
 /**************************************************************************************************
 ***                                 Global Variables                                            ***
@@ -51,12 +65,29 @@
 int x, y;
 status_t irrigaino_sts;
 
-// Declare which fonts we will be using
+//Ethernet 
+  // MAC, IP & PORT
+const uint8_t MAC[] = MAC_ADDRESS;
+IPAddress ip(IP_ADDRESS);             // IP address, may need to change depending on network
+EthernetServer server(SERVER_PORT);   // create a server at port SERVER_PORT=80
+
+
+  // HTTP buffer
+char HTTP_req[REQ_BUF_SZ] = {0};  // buffered HTTP request stored as null terminated string
+char req_index = 0;               // index into HTTP_req buffer
+char buf_1[TXT_BUF_SZ] = {0};     // buffer to save line 1 text 
+char buf_2[TXT_BUF_SZ] = {0};     // buffer to save line 2 text 
+
+// files on SD 
+File webFile;               // the web page file on the SD card
+
+// TFT-LCD
+  // Declare which fonts we will be using
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
 extern uint8_t SevenSegNumFont[];
 
-// Build two objects: LCD and Touch instances
+  // Build two objects: LCD and Touch instances
 UTFT myGLCD(ITDB32S,38,39,40,41);
 UTouch myTouch( 6, 5, 4, 3, 2);
 
@@ -356,6 +387,17 @@ void updateDisplayedTime(timedata_t* timedata)
   }
 }
 
+void drawAlert(char* alert_msg_1st_row, char* alert_msg_2nd_row, char* alert_msg_3rd_row, char* alert_msg_4th_row)
+{
+  myGLCD.clrScr();  //clear sreeen
+  myGLCD.setColor(ALERT_COLOUR);
+  myGLCD.setFont(BigFont);
+  myGLCD.print(alert_msg_1st_row,20,20);   //[FIDOCAD] FJC B 0.5 TY 60 75 16 16 0 0 0 * Initializing
+  myGLCD.print(alert_msg_2nd_row,20,70);   //[FIDOCAD] FJC B 0.5 TY 60 115 16 16 0 0 0 * SD card ...
+  myGLCD.print(alert_msg_3rd_row,20,120);  
+  myGLCD.print(alert_msg_4th_row,20,170);   
+}
+
 
 
 //------------------------------------- Touchscreen functions-----------------------------------//
@@ -549,6 +591,154 @@ void updateSoilMoisture(soilmoisture_t* soilMoisture)
   else *soilMoisture=WATER;  // then (soilMoistureValue < SOILMOISTURE_LOWER_THRESHOLD)                                 // the sensor is in water  
 }
 
+//------------------------------- Ethernet ------------------------------------//   //___________INIZIO NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
+// checks if received HTTP request wants to change "irrigaino_sts.irrigation" status.
+void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button pressed" e non Pompa=1 e Pompa=0. Nella webpage servirebbe un "push button" piuttosto che un button con 2 stati (switch on-off).
+                //L'algoritmo in set deve decidere se forzare l'irrigazione o stoppare l'irrigazione, a seconda della situazione attuale
+{
+    if (StrContains(HTTP_req, "Pompa=1")) {
+        irrigaino_sts.irrigation=UNDERWAY;
+        irrigaino_sts.manualIrrBtn=true;    // irrigation forced by web client
+    }
+    else if (StrContains(HTTP_req, "Pompa=0")) {
+        irrigaino_sts.irrigation=STANDBY;
+        irrigaino_sts.manualIrrBtn=false;    // irrigation stop forced by web client
+    }
+}
+
+// send the XML file with following irrigaino data: //TODO:
+// - irrigaino_sts.irrigation (ENUM, vedi status.h. E' lo stato della pompa. Può essere STANDBY=0, UNDERWAY=1). Deve essere visualizzato sulla webpage
+// - irrigaino_sts.irrigationStart.hours & irrigaino_sts.irrigationStart.minutes (interi senza segno 8-bit (uint8_t) che indicano gli orari di start e stop dell'irrigazione). Deve essere visualizzata sulla webpage
+// - irrigaino_sts.irrigationEnd.hours & irrigaino_sts.irrigationEnd.minutes (come sopra, ma riguarda la fine dell'irrigazione)
+// - irrigaino_sts.soilMoisture (ENUM, vedi status.h. E' lo stato del sensore di umidità del terreno. Può essere DISCONNECTED=0,  DRY=1,  OK=2,  WATER=3)
+// - irrigaino_sts.manualIrrBtn (è un booleano, se 1 il pulsante di avvio manuale deve essere colorato di blu, se è 0, rimane colorato in verde. In altre parole il colore blu vorrebbe indicare il fatto 
+                                //che qualcuno ha premuto il pulsante forzando l'irrigazione o lo stop)
+                               
+void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send the XML response with data values that web client will print on its webpage.
+{
+    int analog_val;            // stores value read from analog inputs
+    int count;                 // used by 'for' loops
+    int sw_arr[] = {2, 3, 5};  // pins interfaced to switches
+    
+    cl.print("<?xml version = \"1.0\" ?>");
+     cl.print("<inputs>");
+      cl.print("<stato>");
+        cl.print(irrigaino_sts.irrigation);    //TODO: stampare sulla webpage -"irrigazione in corso..." oppure -"standby" (probabilmente irrigaino_sts.irrigation stamperà 0 o 1 dato che è un ENUM)
+       cl.print("</stato>");
+    cl.print("<Pompa>");
+    if (irrigaino_sts.irrigation==UNDERWAY) {   //irrigation is underway
+        cl.print("on");
+    }
+    else {                                      // irrigation is in stanby
+        cl.print("off");
+    }
+    cl.println("</Pompa>");
+     cl.print("</inputs>");
+}
+
+// get the two strings for the LCD from the incoming HTTP GET request       //TODO: doveva essere modificata aggiungendo altre 2 stringhe di ingresso come parametri per far stampare anche l'ora di fine irrigazione?
+boolean GetText(char *line1, char *line2, int len)                          // viene chiamata di continuo. Se arriva una richiesta, tira fuori l'ora di inizio/fine irrigazione
+{
+  boolean got_text = false;    // text received flag
+  char *str_begin;             // pointer to start of text
+  char *str_end;               // pointer to end of text
+  int str_len = 0;
+  int txt_index = 0;
+  char *current_line;
+
+  current_line = line1;
+
+  // get pointer to the beginning of the text
+  str_begin = strstr(HTTP_req, "&hours=");
+
+  for (int j = 0; j < 2; j++) { // do for 2 lines of text
+    if (str_begin != NULL) {
+      str_begin = strstr(str_begin, "=");  // skip to the =
+      str_begin += 1;                      // skip over the =
+      str_end = strstr(str_begin, "&");
+
+      if (str_end != NULL) {
+        str_end[0] = 0;  // terminate the string
+        str_len = strlen(str_begin);
+
+        // copy the string to the buffer and replace %20 with space ' '
+        for (int i = 0; i < str_len; i++) {
+          if (str_begin[i] != '%') {
+            if (str_begin[i] == 0) {
+              // end of string
+              break;
+            }
+            else {
+              current_line[txt_index++] = str_begin[i];
+              if (txt_index >= (len - 1)) {
+                // keep the output string within bounds
+                break;
+              }
+            }
+          }
+          else {
+            // replace %20 with a space
+            if ((str_begin[i + 1] == '2') && (str_begin[i + 2] == '0')) {
+              current_line[txt_index++] = ' ';
+              i += 2;
+              if (txt_index >= (len - 1)) {
+                // keep the output string within bounds
+                break;
+              }
+            }
+          }
+        } // end for i loop
+        // terminate the string
+        current_line[txt_index] = 0;
+        if (j == 0) {
+          // got first line of text, now get second line
+          str_begin = strstr(&str_end[1], "minute=");
+          current_line = line2;
+          txt_index = 0;
+        }
+        got_text = true;
+      }
+    }
+  } // end for j loop
+  return got_text;
+}
+
+// sets every element of str to 0 (clears array)
+void StrClear(char *str, char length)
+{
+    for (int i = 0; i < length; i++) {
+        str[i] = 0;
+    }
+}
+
+// searches for the string sfind in the string str returns -1 if string found -0 if string not found
+char StrContains(char *str, char *sfind)
+{
+    char found = 0;
+    char index = 0;
+    char len;
+
+    len = strlen(str);
+    
+    if (strlen(sfind) > len) {
+        return 0;
+    }
+    while (index < len) {
+        if (str[index] == sfind[found]) {
+            found++;
+            if (strlen(sfind) == found) {
+                return 1;
+            }
+        }
+        else {
+            found = 0;
+        }
+        index++;
+    }
+    return 0;
+}
+//___________FINE NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
+    
 /**************************************************************************************************
 ***                                       Setup                                                 ***
 **************************************************************************************************/
@@ -559,9 +749,7 @@ void setup()
 
   // Only for debug purposes
   Serial.begin(9600);
-  
-  pinMode(SOIL_MOISTURE_PIN, INPUT); //set up Soil Moisture pin to be input
-  
+      
   // Initialize display
   myGLCD.InitLCD();
   myGLCD.clrScr();
@@ -575,9 +763,37 @@ void setup()
   // Initialize I2C for RTC module
   Wire.begin();
 
-  // Initialize digital output (relay or pump)
-  pinMode(RELAY_PIN,OUTPUT);
+  // Initialize pins mode
+  pinMode(RELAY_PIN,OUTPUT);          
+  pinMode(SDCARD_CS_PIN,OUTPUT);    
+  pinMode(SOIL_MOISTURE_PIN, INPUT);
+
+  // initialize SD card
+  drawAlert("Initializing ", "SD card...","","");
+  delay(600);
+  if (!SD.begin(SDCARD_CS_PIN))                                         // init failed 
+  {
+    drawAlert("ERROR - ", "SD card", "initialization", "failed!" );   
+    delay(1000);
+    return;    
+  }
+  drawAlert("SUCCESS - ", "SD card", "initialized.", "" );
+  delay(800);
+  // check for index.htm file
+  if (!SD.exists("index.htm"))                                          // can't find index file
+  {
+    drawAlert("ERROR - ", "SD card", "Can't find","index.htm file!" );    
+    delay(1000);
+    return;  
+  }
+  drawAlert("SUCCESS - ", "SD card", "Found ","index.htm file." );
+  delay(800);
+  myGLCD.clrScr();
   
+//  // initialize ethernet
+  Ethernet.begin(MAC, ip);  // initialize Ethernet device
+  server.begin();           // start to listen for clients
+
   // Draw main screen
   draw1stScreen();
 
@@ -596,7 +812,6 @@ void setup()
 }
 
 
-
 /*******************************************************************************************************************************
 ***                                                       MAIN LOOP                                                          ***
 *******************************************************************************************************************************/
@@ -610,44 +825,7 @@ void loop()
   {  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
 
 //-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY--------------------------------------------------------------------
-//      updateSoilMoisture(&irrigaino_sts.soilMoisture);
-//      updateDisplayedSoilMoisture(&irrigaino_sts.soilMoisture);
-//      
-//  Serial.print("please insert the irrigation status: 1 = avvia irrigazione, 0 = stop irigazione\n");
-//  // Read serial input:
-//    while (Serial.available() > 0) 
-//    {
-//      // read the incoming byte:
-//      int incomingByte=Serial.read();
-//      if (incomingByte==0x30) irrigaino_sts.irrigation=STANDBY;
-//      if (incomingByte==0x31) irrigaino_sts.irrigation=UNDERWAY;
-//    }
-//  Serial.print("irrigaino_sts.irrigation: ");
-//  Serial.println(irrigaino_sts.irrigation, DEC);
-//
-//  Serial.print("please insert desired screen: 1 or 2 \n");
-//  // Read serial input:
-//    while (Serial.available() > 0) 
-//    {
-//      // read the incoming byte:
-//      int incomingByte=Serial.read();
-//      if (incomingByte==0x31)
-//      {
-//        draw1stScreen();
-//        irrigaino_sts.irrigation=STANDBY;
-//      }
-//      if (incomingByte==0x32) 
-//      {
-//        draw2ndScreen();
-//        irrigaino_sts.irrigation=UNDERWAY;
-//      }
-//    }
-//  if (irrigaino_sts.manualIrrBtn) 
-//
-//
-//
-//  if(irrigaino_sts.manualIrrBtn==1)
-//  Serial.print("irrigaino_sts.manualIrrBtn==1 !!!\n");
+
 //-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------*/
 
     // Get RTC data 
@@ -713,6 +891,92 @@ void loop()
     if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);   // check if a button is pressed on screen 1 or on screen 2
     else checkPressedBtn_screen2(&irrigaino_sts);
 
-  }
-}
+    //___________INIZIO NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
+    EthernetClient client = server.available();  // try to get client
+
+    if (client) {  // got client?
+        boolean currentLineIsBlank = true;
+        while (client.connected()) {
+             
+            if (client.available()) {   // client data available to read
+                         
+                char c = client.read(); // read 1 byte (character) from client limit the size of the stored received HTTP request 
+                                        // buffer first part of HTTP request in HTTP_req array (string)
+                                        // leave last element in array as 0 to null terminate string (REQ_BUF_SZ - 1)
+                if (req_index < (REQ_BUF_SZ - 1)) {
+                    HTTP_req[req_index] = c;          // save HTTP request character
+                    req_index++;
+                }
+                // last line of client request is blank and ends with \n 
+                //respond to client only after last line received
+                if (c == '\n' && currentLineIsBlank) {
+                    // send a standard http response header
+                    client.println("HTTP/1.1 200 OK");
+                    // remainder of header follows below, depending on if
+                    // - web page or XML page is requested
+                    // - Ajax request - send XML file
+             
+                    if (StrContains(HTTP_req, "ajax_inputs")) {   // se il client sta richiedendo i dati dell'arduino (ajax_inputs), allora è sottointeso che la pagina web è già stata caricata dal client ed il client sta richiedendo i dati per l'aggiornamento
+                        // send rest of HTTP header
+                        client.println("Content-Type: text/xml");
+                        client.println("Connection: keep-alive");
+                        client.println();
+                        Set();
+                        // send XML file containing input states
+                        XML_response(client);
+                        // print the received text to the LCD if found
+                        if (GetText(buf_1, buf_2, TXT_BUF_SZ)) {          // estrae i valori delle ore e minuti di inizio/fine irrigazione (fine non funziona, senti Stefano)
+                          // buf_1 and buf_2 now contain the text from
+                          // the web page
+                          // write the received text
+                          Serial.print("\n");
+                          Serial.print(buf_1);
+                          Serial.print("\n");
+                          Serial.print(buf_2);
+                          Serial.print("\n");
+                          }
+                    }
+                    else {  // web page request             // altrimenti il client sta richiedendo la pagina web
+                        // send rest of HTTP header
+                         
+                        client.println("Content-Type: text/html");
+                        client.println("Connection: keep-alive");
+                        client.println();
+                        // send web page
+                        webFile = SD.open("index.htm");        // open web page file
+                        if (webFile) {
+                            while(webFile.available()) {
+                                client.write(webFile.read()); // send web page to client
+                            }
+                            webFile.close();
+                        }
+                    }
+                    // display received HTTP request on serial port
+                    Serial.print(HTTP_req);
+                    // reset buffer index and all buffer elements to 0
+                    req_index = 0;
+                    StrClear(HTTP_req, REQ_BUF_SZ);
+                    break;
+                }
+                // every line of text received from the client ends with \r\n
+                if (c == '\n') {
+                   
+                    // last character on line of received text
+                    // starting new line with next character read
+                    currentLineIsBlank = true;
+                } 
+                else if (c != '\r') {
+                    // a text character was received from client
+                    
+                     currentLineIsBlank = false;
+                }
+            } // end if (client.available())
+        } // end while (client.connected())
+        delay(1);      // give the web browser time to receive the data
+        client.stop(); // close the connection
+    } // end if (client)
+    //___________FINE NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
+    
+  } // end while(true)
+} // end loop()
 
