@@ -618,6 +618,7 @@ void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button 
                                 //che qualcuno ha premuto il pulsante forzando l'irrigazione o lo stop)                    
 void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send the XML response with data values that web client will print on its webpage.
 {
+  Serial.println("on XML_response function");
     cl.print("<?xml version = \"1.0\" ?>");
     cl.print("<inputs>");
     cl.print("<terreno>");
@@ -893,8 +894,8 @@ void loop()
 
     //___________INIZIO NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
     EthernetClient client = server.available();  // try to get client
-
     if (client) {  // got client?
+      Serial.println("got client = yes");
         boolean currentLineIsBlank = true;
         while (client.connected()) {
              
@@ -924,6 +925,7 @@ void loop()
                         Set();
                         // send XML file containing input states
                         XML_response(client);
+                        Serial.println("XMLResponse executed");
                         // print the received text to the LCD if found
                         if (GetText(buf_1, buf_2, TXT_BUF_SZ)) {          // estrae i valori delle ore e minuti di inizio/fine irrigazione (fine non funziona, senti Stefano)
                           // buf_1 and buf_2 now contain the text from

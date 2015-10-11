@@ -21,6 +21,7 @@
 				if (this.readyState == 4) {
 					if (this.status == 200) {
 						if (this.responseXML != null) {
+							console.log(this.responseXML);
 							// XML file received - contains analog values, switch values and LED states  //=== oppure == sono uguali nel tipo????
 							if (this.responseXML.getElementsByTagName("terreno")[0].childNodes[0].nodeValue === "0") {
 								document.getElementById("terreno").innerHTML = "Disconnesso";
@@ -52,7 +53,7 @@
 								Pompa_state = 0;
 							}
 							//Programma
-							if(this.responseXML.getElementsByTagName("programma")[0].childNodes[0].nodeValue != ""){ 
+							/*if(this.responseXML.getElementsByTagName("programma")[0].childNodes[0].nodeValue != ""){ 
 								if(this.responseXML.getElementsByTagName("programma")[1].childNodes[0].nodeValue != ""){
 									document.getElementById("prog_start").innerHTML = this.responseXML.getElementsByTagName("programma")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("programma")[1].childNodes[0].nodeValue;
 									}
@@ -61,7 +62,7 @@
 								if(this.responseXML.getElementsByTagName("programma")[3].childNodes[0].nodeValue != ""){
 									document.getElementById("prog_stop").innerHTML = this.responseXML.getElementsByTagName("programma")[2].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("programma")[3].childNodes[0].nodeValue;
 									}
-								}	
+								}	*/
 						}
 					}
 				}
@@ -89,7 +90,7 @@
 		}
 		
 		function Sendprog()
-        {	boolean check = 1;
+        {	var check = 1;
 			
 
 			//controlla se è un numero
@@ -135,7 +136,7 @@
 	
 	body {
 			background-color : #006600;
-			background-image: url("./bg.jpg");
+			background-image: url("192.168.1.33/bg.jpg");
 			top: 0;
 			left: 0;
 			width: 100%;
