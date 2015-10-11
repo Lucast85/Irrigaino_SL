@@ -629,7 +629,7 @@ void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send
     cl.print("</Pompa>");
     cl.print("<programma>");
     cl.print(irrigaino_sts.irrigationStart.hours);
-    cl.print(irrigaino_sts.irrigationStart.minutes );
+    cl.print(irrigaino_sts.irrigationStart.minutes);
     cl.print(irrigaino_sts.irrigationEnd.hours);
     cl.print(irrigaino_sts.irrigationEnd.minutes);
     cl.print("</programma>");
