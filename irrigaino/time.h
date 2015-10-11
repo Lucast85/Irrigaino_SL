@@ -1,12 +1,6 @@
 #ifndef TIME_H_
 #define TIME_H_
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-
-#define DS1307_ADDRESS 0x68
-
 // struct datatype holding time data (hh and mm)
 typedef struct
 {

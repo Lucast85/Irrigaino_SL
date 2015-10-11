@@ -32,7 +32,7 @@
 #define REQ_BUF_SZ        60                                // size of buffer used to capture HTTP requests
 #define TXT_BUF_SZ        3
 #define MAC_ADDRESS       {0xDE,0xAD,0xBE,0xEF,0xFE,0xED}   // the MAC address of ethernet interface
-#define IP_ADDRESS        192,168,1,75                      // IP address, may need to change depending on network
+#define IP_ADDRESS        192,168,1,33                      // IP address, may need to change depending on network
 #define SERVER_PORT       80                                // the port of the server  
 // to change the CS pin of ethernet module (ENC28J60), define it in Enc28J60Network.h (overwrite SS with desired pin number, 15 in this application)  
 
@@ -595,8 +595,9 @@ void updateSoilMoisture(soilmoisture_t* soilMoisture)
 
 //------------------------------- Ethernet ------------------------------------//   //___________INIZIO NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
 // checks if received HTTP request wants to change "irrigaino_sts.irrigation" status.
-void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button pressed" e non Pompa=1 e Pompa=0. Nella webpage servirebbe un "push button" piuttosto che un button con 2 stati (switch on-off).
-                //L'algoritmo in set deve decidere se forzare l'irrigazione o stoppare l'irrigazione, a seconda della situazione attuale
+void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button pressed" e non Pompa=1 e Pompa=0.
+                //L'algoritmo in set deve decidere se forzare l'irrigazione o stoppare l'irrigazione, a seconda della situazione di partenza.
+                // Il webClient mi manda Pompa=1 o Pompa=0 SOLO se viene premuto il pulsante sulla webpage. Viene richimata solo se qlcuno ha premuto il pulsante.
 {
     if (StrContains(HTTP_req, "Pompa=1")) {
         irrigaino_sts.irrigation=UNDERWAY;
@@ -608,7 +609,7 @@ void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button 
     }
 }
 
-// send the XML file with following irrigaino data: //TODO:
+// send the XML file with following irrigaino data: //TODO: // Questa funzione viene richiamata continuamente per aggiornare la pagina web (indica alla pagina lo stato della centralina)
 // - irrigaino_sts.irrigation (ENUM, vedi status.h. E' lo stato della pompa. Può essere STANDBY=0, UNDERWAY=1). Deve essere visualizzato sulla webpage
 // - irrigaino_sts.irrigationStart.hours & irrigaino_sts.irrigationStart.minutes (interi senza segno 8-bit (uint8_t) che indicano gli orari di start e stop dell'irrigazione). Deve essere visualizzata sulla webpage
 // - irrigaino_sts.irrigationEnd.hours & irrigaino_sts.irrigationEnd.minutes (come sopra, ma riguarda la fine dell'irrigazione)
@@ -618,10 +619,6 @@ void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button 
                                
 void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send the XML response with data values that web client will print on its webpage.
 {
-    int analog_val;            // stores value read from analog inputs
-    int count;                 // used by 'for' loops
-    int sw_arr[] = {2, 3, 5};  // pins interfaced to switches
-    
     cl.print("<?xml version = \"1.0\" ?>");
      cl.print("<inputs>");
       cl.print("<stato>");
@@ -977,7 +974,7 @@ void loop()
         delay(1);      // give the web browser time to receive the data
         client.stop(); // close the connection
     } // end if (client)
-    //___________FINE NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
+    //___________FINE NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE__________________________________________________________________
     
   } // end while(true)
 } // end loop()
