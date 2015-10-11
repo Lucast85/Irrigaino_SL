@@ -624,16 +624,24 @@ void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send
     cl.print("<terreno>");
     cl.print(irrigaino_sts.soilMoisture);    //TODO: stampare sulla webpage -"irrigazione in corso..." oppure -"standby"
     cl.print("</terreno>");
-    cl.print("<Pompa>");
+    cl.print("<irrigation>");
     cl.print(irrigaino_sts.irrigation);
+    cl.print("</irrigation>");
+    cl.print("<manualIrrBtn>");
     cl.print(irrigaino_sts.manualIrrBtn);
-    cl.print("</Pompa>");
-    cl.print("<programma>");
+    cl.print("</manualIrrBtn>"); 
+    cl.print("<starthours>");
     cl.print(irrigaino_sts.irrigationStart.hours);
+    cl.print("</starthours>");
+    cl.print("<startminutes>");
     cl.print(irrigaino_sts.irrigationStart.minutes);
+    cl.print("</startminutes>");
+    cl.print("<stophours>"); 
     cl.print(irrigaino_sts.irrigationEnd.hours);
+    cl.print("</stophours>"); 
+    cl.print("<stopminutes>"); 
     cl.print(irrigaino_sts.irrigationEnd.minutes);
-    cl.print("</programma>");
+    cl.print("</stopminutes>");
     cl.print("</inputs>");
 }
 

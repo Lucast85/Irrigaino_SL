@@ -36,33 +36,29 @@
 								document.getElementById("terreno").innerHTML = "In Acqua";
 							}
 							// Pompa
-							if (this.responseXML.getElementsByTagName("Pompa")[0].childNodes[0].nodeValue == "1") { // irrigaino_sts.irrigation
+							if (this.responseXML.getElementsByTagName("irrigation")[0].childNodes[0].nodeValue == "1") { // irrigaino_sts.irrigation
 								document.getElementById("Pompa").innerHTML = "Stop ";
-								if (this.responseXML.getElementsByTagName("Pompa")[1].childNodes[0].nodeValue == "0"){ // irrigaino_sts.manualIrrBtn
-										document.getElementById("stato_prog").innerHTML = "Irrigazione in corso ";
-									} 
-								else {
-									document.getElementById("stato_prog").innerHTML = "Irrigazione Manuale in corso ";
-									//colore pulsante diverso
-									} 
+								document.getElementById("stato_prog").innerHTML = "Irrigazione in corso ";
 								Pompa_state = 1;
 							}
-							if (this.responseXML.getElementsByTagName("Pompa")[0].childNodes[0].nodeValue =="0") {
+							if (this.responseXML.getElementsByTagName("manualIrrBtn")[0].childNodes[0].nodeValue == "1"){ // irrigaino_sts.manualIrrBtn
+									document.getElementById("Pompa").innerHTML = "Stop ";
+									document.getElementById("stato_prog").innerHTML = "Irrigazione Manuale in corso ";
+									//colore pulsante diverso
+									Pompa_state = 1;
+									} 
+								
+							if (this.responseXML.getElementsByTagName("irrigation")[0].childNodes[0].nodeValue =="0") {
 								document.getElementById("Pompa").innerHTML = "Avvio ";
 								document.getElementById("stato_prog").innerHTML = "Standby ";
 								Pompa_state = 0;
 							}
 							//Programma
-							/*if(this.responseXML.getElementsByTagName("programma")[0].childNodes[0].nodeValue != ""){ 
-								if(this.responseXML.getElementsByTagName("programma")[1].childNodes[0].nodeValue != ""){
-									document.getElementById("prog_start").innerHTML = this.responseXML.getElementsByTagName("programma")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("programma")[1].childNodes[0].nodeValue;
-									}
-								}
-							if(this.responseXML.getElementsByTagName("programma")[2].childNodes[0].nodeValue != ""){
-								if(this.responseXML.getElementsByTagName("programma")[3].childNodes[0].nodeValue != ""){
-									document.getElementById("prog_stop").innerHTML = this.responseXML.getElementsByTagName("programma")[2].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("programma")[3].childNodes[0].nodeValue;
-									}
-								}	*/
+							
+							document.getElementById("prog_start").innerHTML = this.responseXML.getElementsByTagName("starthours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("startminutes")[0].childNodes[0].nodeValue;
+							document.getElementById("prog_stop").innerHTML = this.responseXML.getElementsByTagName("stophours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("stopminutes")[0].childNodes[0].nodeValue;
+									
+								
 						}
 					}
 				}
@@ -136,7 +132,7 @@
 	
 	body {
 			background-color : #006600;
-			background-image: url("192.168.1.33/bg.jpg");
+			background-image: url("http://www.boorp.com/sfondi_gratis_desktop_pc/sfondi_gratis/sfondi_foto_immagini_royalty_free_uso_commerciale/verde_erba.jpg");
 			top: 0;
 			left: 0;
 			width: 100%;
@@ -229,9 +225,9 @@
 		</div>
 		<div class="IO_box">
 		<h2>Stato della programmazione</h2><br />
-		<output id="stato_prog">.....</output>
-		<output id="prog_start"></output>
-		<output id="prog_stop"></output>
+		<output id="stato_prog">.....</output><br />
+		<output id="prog_start"></output><br />
+		<output id="prog_stop"></output><br />
 		</div>
 		
 		
