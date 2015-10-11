@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>IRRIGAINO</title>
+       
+		<script>
+		
+		strPompa = "";
+		strhourstart = "";
+        strminutestart = "";
+		strhourstop = "";
+		strminutestop = "";
+		var Pompa_state = 0;
+		function GetArduinoIO()
+		{
+			nocache = "&nocache=" + Math.random() * 1000000;
+			var request = new XMLHttpRequest();
+		
+			request.onreadystatechange = function()
+			{
+				if (this.readyState == 4) {
+					if (this.status == 200) {
+						if (this.responseXML != null) {
+							// XML file received - contains analog values, switch values and LED states  //=== oppure == sono uguali nel tipo????
+							if (this.responseXML.getElementsByTagName("terreno")[0].childNodes[0].nodeValue === "0") {
+								document.getElementById("terreno").innerHTML = "Disconnesso";
+							}
+							if (this.responseXML.getElementsByTagName("terreno")[0].childNodes[0].nodeValue == "1") {
+								document.getElementById("terreno").innerHTML = "Secco";
+							}
+							if (this.responseXML.getElementsByTagName("terreno")[0].childNodes[0].nodeValue == "2") {
+								document.getElementById("terreno").innerHTML = "OK";
+							}
+							if (this.responseXML.getElementsByTagName("terreno")[0].childNodes[0].nodeValue == "3") {
+								document.getElementById("terreno").innerHTML = "In Acqua";
+							}
+							// Pompa
+							if (this.responseXML.getElementsByTagName("Pompa")[0].childNodes[0].nodeValue == "1") { // irrigaino_sts.irrigation
+								document.getElementById("Pompa").innerHTML = "Stop ";
+								if (this.responseXML.getElementsByTagName("Pompa")[1].childNodes[0].nodeValue == "0"){ // irrigaino_sts.manualIrrBtn
+										document.getElementById("stato_prog").innerHTML = "Irrigazione in corso ";
+									} 
+								else {
+									document.getElementById("stato_prog").innerHTML = "Irrigazione Manuale in corso ";
+									//colore pulsante diverso
+									} 
+								Pompa_state = 1;
+							}
+							if (this.responseXML.getElementsByTagName("Pompa")[0].childNodes[0].nodeValue =="0") {
+								document.getElementById("Pompa").innerHTML = "Avvio ";
+								document.getElementById("stato_prog").innerHTML = "Standby ";
+								Pompa_state = 0;
+							}
+							//Programma
+							if(this.responseXML.getElementsByTagName("programma")[0].childNodes[0].nodeValue != ""){ 
+								if(this.responseXML.getElementsByTagName("programma")[1].childNodes[0].nodeValue != ""){
+									document.getElementById("prog_start").innerHTML = this.responseXML.getElementsByTagName("programma")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("programma")[1].childNodes[0].nodeValue;
+									}
+								}
+							if(this.responseXML.getElementsByTagName("programma")[2].childNodes[0].nodeValue != ""){
+								if(this.responseXML.getElementsByTagName("programma")[3].childNodes[0].nodeValue != ""){
+									document.getElementById("prog_stop").innerHTML = this.responseXML.getElementsByTagName("programma")[2].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("programma")[3].childNodes[0].nodeValue;
+									}
+								}	
+						}
+					}
+				}
+			}
+			// send HTTP GET request with LEDs to switch on/off if any
+			request.open("GET", "ajax_inputs" + strPompa + nocache, true);
+			request.send(null);
+			setTimeout('GetArduinoIO()', 1000);
+			
+			strPompa = "";
+		}
+		// service LEDs when checkbox checked/unchecked
+		
+	
+		function GetButton()
+		{
+			if (Pompa_state === 1) {
+				Pompa_state = 0;
+				strPompa = "&Pompa=0";
+			}
+			else {
+				Pompa_state = 1;
+				strPompa = "&Pompa=1";
+			}
+		}
+		
+		function Sendprog()
+        {	boolean check = 1;
+			
+
+			//controlla se è un numero
+			if (isNaN(document.getElementById("txt_form").hourstart.value)){
+				check = 0;
+			}
+			if (isNaN(document.getElementById("txt_form").minutestarttart.value)){
+				check = 0;
+			}
+			if (isNaN(document.getElementById("txt_form").hourstop.value)){
+				check = 0;
+			}
+			if (isNaN(document.getElementById("txt_form").minutestop.value)){
+				check = 0;
+			}
+			
+			//controllo se orario valido
+		
+			if(check){	
+				nocache = "&nocache=" + Math.random() * 1000000;
+				var request = new XMLHttpRequest();
+				
+				strhourstart = "&hourstart=" + document.getElementById("txt_form").hourstart.value;
+				strminutestart = "&minutestart=" + document.getElementById("txt_form").minutestart.value;
+				strhourstop = "&hourstop=" + document.getElementById("txt_form").hourstop.value;
+				strminutestop = "&minutestop=" + document.getElementById("txt_form").minutestop.value;
+				
+				request.open("GET", "ajax_inputs" + strhourstart + strminutestart + strhourstop + strminutestop + nocache, true);
+				request.send(null);
+				document.getElementById("txt_form").hourstart.value='';
+				document.getElementById("txt_form").minutestart.value='';
+				document.getElementById("txt_form").hourstop.value='';
+				document.getElementById("txt_form").minutestop.value='';
+				check=0;
+				}
+			else{
+					alert("Inserire un orario di programmazione valido");
+					}
+        }
+	
+	</script>
+	<style>	
+	
+	body {
+			background-color : #006600;
+			background-image: url("./bg.jpg");
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-repeat: repeat;
+			background-attachment: fixed;
+				
+			}
+		
+	.IO_box {
+				float: left;
+			margin: 20px 20px 20px 20px;
+			border: 3px solid blue;
+			padding: 10px 5px 10px 5px;
+			width:180px;
+			height:180px;
+			background: rgb(204, 204, 204); /* Fallback for older browsers without RGBA-support */
+			background: rgba(204, 204, 204, 0.8);
+			
+		}
+		h1 {
+			font-size: 42px;
+			color: blue;
+			margin: 10px 0px 10px 25px;
+			text-align: left;
+			font: italic bold;
+			font-weight: bold;
+			text-shadow: 5px 1px 5px rgba(150, 150, 150, 1);
+		
+		}
+		h2 {
+			font-size: 20px;
+			color: black;
+			margin: 10px 10px 5px 10px;
+			font: italic bold;
+			font-weight: bold;
+			text-align: center;
+			text-shadow: 5px 1px 5px rgba(150, 150, 150, 1);
+		}
+		p, form {
+			font-size: 17px;
+			color: black;
+			font:  bold;
+			font-weight: bold;
+			text-align: center;
+			text-shadow: 5px 1px 5px rgba(150, 150, 150, 1);
+			
+		}
+		
+		
+		output {
+		position: absolute;
+		font-size: 18px;
+		margin: 25px	20px	25px	70px;
+		}
+			
+			</style>
+	</head>
+    <body onload="GetArduinoIO()">
+     
+		<h1>IRRIGAINO</h1>
+	
+        <div class="IO_box">
+			
+			<h2>Stato terreno :</h2><br />
+			<output id="terreno">....</output>
+			<div class="box_background"></div>
+		</div>
+		
+		
+		<div class="IO_box">
+		
+			<h2>Avvio Manuale</h2><br />
+			
+			<button type="button" class="myButton" id="Pompa" onclick="GetButton()"> Avvio </button><br /><br /> 
+			
+		</div>
+		<div class="IO_box">
+			<h2>Programma :</h2><br />
+			<form id="txt_form" name="frmText">
+            <label>Start <input type="text" name="hourstart" size="1" maxlength="2" /></label>
+            <label>: <input type="text" name="minutestart" size="1" maxlength="2" /></label><br /><br />
+			  <label>Stop <input type="text" name="hourstop" size="1" maxlength="2" /></label>
+            <label>: <input type="text" name="minutestop" size="1" maxlength="2" /></label><br /><br />
+			
+        </form>
+        <br />
+        <input type="submit" class="myButton" id="submit" value="Imposta" onclick="Sendprog()" />
+			
+		</div>
+		<div class="IO_box">
+		<h2>Stato della programmazione</h2><br />
+		<output id="stato_prog">.....</output>
+		<output id="prog_start"></output>
+		<output id="prog_stop"></output>
+		</div>
+		
+		
+	  
+	</body>
+	
+</html>

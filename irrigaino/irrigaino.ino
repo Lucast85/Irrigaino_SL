@@ -615,24 +615,25 @@ void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button 
 // - irrigaino_sts.irrigationEnd.hours & irrigaino_sts.irrigationEnd.minutes (come sopra, ma riguarda la fine dell'irrigazione)
 // - irrigaino_sts.soilMoisture (ENUM, vedi status.h. E' lo stato del sensore di umidità del terreno. Può essere DISCONNECTED=0,  DRY=1,  OK=2,  WATER=3)
 // - irrigaino_sts.manualIrrBtn (è un booleano, se 1 il pulsante di avvio manuale deve essere colorato di blu, se è 0, rimane colorato in verde. In altre parole il colore blu vorrebbe indicare il fatto 
-                                //che qualcuno ha premuto il pulsante forzando l'irrigazione o lo stop)
-                               
+                                //che qualcuno ha premuto il pulsante forzando l'irrigazione o lo stop)                    
 void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send the XML response with data values that web client will print on its webpage.
 {
     cl.print("<?xml version = \"1.0\" ?>");
-     cl.print("<inputs>");
-      cl.print("<stato>");
-        cl.print(irrigaino_sts.irrigation);    //TODO: stampare sulla webpage -"irrigazione in corso..." oppure -"standby" (probabilmente irrigaino_sts.irrigation stamperà 0 o 1 dato che è un ENUM)
-       cl.print("</stato>");
+    cl.print("<inputs>");
+    cl.print("<terreno>");
+    cl.print(irrigaino_sts.soilMoisture);    //TODO: stampare sulla webpage -"irrigazione in corso..." oppure -"standby"
+    cl.print("</terreno>");
     cl.print("<Pompa>");
-    if (irrigaino_sts.irrigation==UNDERWAY) {   //irrigation is underway
-        cl.print("on");
-    }
-    else {                                      // irrigation is in stanby
-        cl.print("off");
-    }
-    cl.println("</Pompa>");
-     cl.print("</inputs>");
+    cl.print(irrigaino_sts.irrigation);
+    cl.print(irrigaino_sts.manualIrrBtn);
+    cl.print("</Pompa>");
+    cl.print("<programma>");
+    cl.print(irrigaino_sts.irrigationStart.hours);
+    cl.print(irrigaino_sts.irrigationStart.minutes );
+    cl.print(irrigaino_sts.irrigationEnd.hours);
+    cl.print(irrigaino_sts.irrigationEnd.minutes);
+    cl.print("</programma>");
+    cl.print("</inputs>");
 }
 
 // get the two strings for the LCD from the incoming HTTP GET request       //TODO: doveva essere modificata aggiungendo altre 2 stringhe di ingresso come parametri per far stampare anche l'ora di fine irrigazione?
