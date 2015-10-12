@@ -55,10 +55,9 @@
 							}
 							//Programma
 							
-							document.getElementById("prog_start").innerHTML = this.responseXML.getElementsByTagName("starthours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("startminutes")[0].childNodes[0].nodeValue;
-							document.getElementById("prog_stop").innerHTML = this.responseXML.getElementsByTagName("stophours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("stopminutes")[0].childNodes[0].nodeValue;
-									
-								
+							document.getElementById("prog_start").innerHTML = "Inizio&nbsp&nbsp&nbsp" + this.responseXML.getElementsByTagName("starthours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("startminutes")[0].childNodes[0].nodeValue;
+							document.getElementById("prog_stop").innerHTML =  "Fine   &nbsp&nbsp&nbsp" + this.responseXML.getElementsByTagName("stophours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("stopminutes")[0].childNodes[0].nodeValue;
+															
 						}
 					}
 				}
@@ -93,7 +92,7 @@
 			if (isNaN(document.getElementById("txt_form").hourstart.value)){
 				check = 0;
 			}
-			if (isNaN(document.getElementById("txt_form").minutestarttart.value)){
+			if (isNaN(document.getElementById("txt_form").minutestart.value)){
 				check = 0;
 			}
 			if (isNaN(document.getElementById("txt_form").hourstop.value)){
@@ -109,12 +108,12 @@
 				nocache = "&nocache=" + Math.random() * 1000000;
 				var request = new XMLHttpRequest();
 				
-				strhourstart = "&hourstart=" + document.getElementById("txt_form").hourstart.value;
-				strminutestart = "&minutestart=" + document.getElementById("txt_form").minutestart.value;
-				strhourstop = "&hourstop=" + document.getElementById("txt_form").hourstop.value;
-				strminutestop = "&minutestop=" + document.getElementById("txt_form").minutestop.value;
+				strhourstart = "@" + document.getElementById("txt_form").hourstart.value;
+				strminutestart = "@" + document.getElementById("txt_form").minutestart.value;
+				strhourstop = "@" + document.getElementById("txt_form").hourstop.value;
+				strminutestop = "@" + document.getElementById("txt_form").minutestop.value+"@";
 				
-				request.open("GET", "ajax_inputs" + strhourstart + strminutestart + strhourstop + strminutestop + nocache, true);
+				request.open("GET", "programmazione" + strhourstart + strminutestart + strhourstop + strminutestop + nocache, true);
 				request.send(null);
 				document.getElementById("txt_form").hourstart.value='';
 				document.getElementById("txt_form").minutestart.value='';
@@ -182,11 +181,33 @@
 			
 		}
 		
+		button{
+				height:30px; 
+				width:80px; 
+				margin: -20px -50px; 
+				position:relative;
+				top:40px; 
+				left:100px;
+		}		
+		
+		#submit{
+				height:30px; 
+				width:80px; 
+				margin: -20px -50px; 
+				position:relative;
+				top:0px; 
+				left:100px;
+		
+		}		
 		
 		output {
-		position: absolute;
-		font-size: 18px;
-		margin: 25px	20px	25px	70px;
+			height:50px;
+			width: 170px;
+			position: absolute;
+			font-size: 18px;
+			text-align: center;
+			text-shadow: 5px 1px 5px rgba(150, 150, 150, 1);
+
 		}
 			
 			</style>
@@ -213,9 +234,9 @@
 		<div class="IO_box">
 			<h2>Programma :</h2><br />
 			<form id="txt_form" name="frmText">
-            <label>Start <input type="text" name="hourstart" size="1" maxlength="2" /></label>
+            <label>Inizio <input type="text" name="hourstart" size="1" maxlength="2" /></label>
             <label>: <input type="text" name="minutestart" size="1" maxlength="2" /></label><br /><br />
-			  <label>Stop <input type="text" name="hourstop" size="1" maxlength="2" /></label>
+			<label>Fine <input type="text" name="hourstop" size="1" maxlength="2" /></label>
             <label>: <input type="text" name="minutestop" size="1" maxlength="2" /></label><br /><br />
 			
         </form>
@@ -225,9 +246,11 @@
 		</div>
 		<div class="IO_box">
 		<h2>Stato della programmazione</h2><br />
-		<output id="stato_prog">.....</output><br />
-		<output id="prog_start"></output><br />
-		<output id="prog_stop"></output><br />
+		<output id="stato_prog">..... </output><br /><br /><br />
+		 
+		 <output id="prog_start"></output><br /> 
+		 <output id="prog_stop"></output><br />
+		
 		</div>
 		
 		

@@ -45,7 +45,7 @@
 // Soil Moisture
 #define SOIL_MOISTURE_PIN     A0  // analog input pin of the sensor
 #define LPF                   1   // If 1 Low Pass Filter is active. If 0, LPF is inactive.
-#define FILTER_SHIFT          8   // the parameter K of LPF
+#define FILTER_SHIFT          10   // the parameter K of LPF
 
 /*
 *   SOIL MOISTURE THRESHOLDS:
@@ -646,70 +646,25 @@ void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send
 }
 
 // get the two strings for the LCD from the incoming HTTP GET request       //TODO: doveva essere modificata aggiungendo altre 2 stringhe di ingresso come parametri per far stampare anche l'ora di fine irrigazione?
-boolean GetText(char *line1, char *line2, int len)                          // viene chiamata di continuo. Se arriva una richiesta, tira fuori l'ora di inizio/fine irrigazione
+void GetText()                          // viene chiamata di continuo. Se arriva una richiesta, tira fuori l'ora di inizio/fine irrigazione
 {
-  boolean got_text = false;    // text received flag
-  char *str_begin;             // pointer to start of text
-  char *str_end;               // pointer to end of text
-  int str_len = 0;
-  int txt_index = 0;
-  char *current_line;
+  String req = String(HTTP_req);
+  int commaIndex = req.indexOf('@');
+  int secondcommaIndex = req.indexOf('@',commaIndex+1);
+  int thirdcommaIndex = req.indexOf('@',secondcommaIndex+1);
+  int fourthcommaIndex = req.indexOf('@',thirdcommaIndex+1);
+  int fifthcommaIndex = req.indexOf('@',fourthcommaIndex+1);
+  int sixthcommaIndex = req.indexOf('@',fifthcommaIndex+1);
 
-  current_line = line1;
+  String START_H = req.substring(commaIndex+1, secondcommaIndex);
+  String START_M = req.substring(secondcommaIndex+1, thirdcommaIndex);
+  String STOP_H = req.substring(thirdcommaIndex+1, fourthcommaIndex);
+  String STOP_M = req.substring(fourthcommaIndex+1,fifthcommaIndex);
 
-  // get pointer to the beginning of the text
-  str_begin = strstr(HTTP_req, "&hours=");
-
-  for (int j = 0; j < 2; j++) { // do for 2 lines of text
-    if (str_begin != NULL) {
-      str_begin = strstr(str_begin, "=");  // skip to the =
-      str_begin += 1;                      // skip over the =
-      str_end = strstr(str_begin, "&");
-
-      if (str_end != NULL) {
-        str_end[0] = 0;  // terminate the string
-        str_len = strlen(str_begin);
-
-        // copy the string to the buffer and replace %20 with space ' '
-        for (int i = 0; i < str_len; i++) {
-          if (str_begin[i] != '%') {
-            if (str_begin[i] == 0) {
-              // end of string
-              break;
-            }
-            else {
-              current_line[txt_index++] = str_begin[i];
-              if (txt_index >= (len - 1)) {
-                // keep the output string within bounds
-                break;
-              }
-            }
-          }
-          else {
-            // replace %20 with a space
-            if ((str_begin[i + 1] == '2') && (str_begin[i + 2] == '0')) {
-              current_line[txt_index++] = ' ';
-              i += 2;
-              if (txt_index >= (len - 1)) {
-                // keep the output string within bounds
-                break;
-              }
-            }
-          }
-        } // end for i loop
-        // terminate the string
-        current_line[txt_index] = 0;
-        if (j == 0) {
-          // got first line of text, now get second line
-          str_begin = strstr(&str_end[1], "minute=");
-          current_line = line2;
-          txt_index = 0;
-        }
-        got_text = true;
-      }
-    }
-  } // end for j loop
-  return got_text;
+  irrigaino_sts.irrigationStart.hours = START_H.toInt();
+  irrigaino_sts.irrigationStart.minutes = START_M.toInt();
+  irrigaino_sts.irrigationEnd.hours = STOP_H.toInt();
+  irrigaino_sts.irrigationEnd.minutes = STOP_M.toInt();
 }
 
 // sets every element of str to 0 (clears array)
@@ -935,17 +890,12 @@ void loop()
                         XML_response(client);
                         Serial.println("XMLResponse executed");
                         // print the received text to the LCD if found
-                        if (GetText(buf_1, buf_2, TXT_BUF_SZ)) {          // estrae i valori delle ore e minuti di inizio/fine irrigazione (fine non funziona, senti Stefano)
-                          // buf_1 and buf_2 now contain the text from
-                          // the web page
-                          // write the received text
-                          Serial.print("\n");
-                          Serial.print(buf_1);
-                          Serial.print("\n");
-                          Serial.print(buf_2);
-                          Serial.print("\n");
-                          }
+                        
                     }
+                    else if (StrContains(HTTP_req, "programmazione")) {          // estrae i valori delle ore e minuti di inizio/fine irrigazione (fine non funziona, senti Stefano)
+                            // write the received text
+                            GetText();
+                          }
                     else {  // web page request             // altrimenti il client sta richiedendo la pagina web
                         // send rest of HTTP header
                          
