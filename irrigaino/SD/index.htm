@@ -37,22 +37,35 @@
 							}
 							// Pompa
 							if (this.responseXML.getElementsByTagName("irrigation")[0].childNodes[0].nodeValue == "1") { // irrigaino_sts.irrigation
+								if (this.responseXML.getElementsByTagName("manualIrrBtn")[0].childNodes[0].nodeValue == "0"){
 								document.getElementById("Pompa").innerHTML = "Stop ";
 								document.getElementById("stato_prog").innerHTML = "Irrigazione in corso ";
+								Pompa_state = 1;}
+								else {
+								document.getElementById("Pompa").innerHTML = "Stop ";
+								document.getElementById("stato_prog").innerHTML = "Irrigazione Manuale in corso ";
 								Pompa_state = 1;
+															
+								}
 							}
-							if (this.responseXML.getElementsByTagName("manualIrrBtn")[0].childNodes[0].nodeValue == "1"){ // irrigaino_sts.manualIrrBtn
-									document.getElementById("Pompa").innerHTML = "Stop ";
-									document.getElementById("stato_prog").innerHTML = "Irrigazione Manuale in corso ";
-									//colore pulsante diverso
-									Pompa_state = 1;
-									} 
+							
 								
 							if (this.responseXML.getElementsByTagName("irrigation")[0].childNodes[0].nodeValue =="0") {
+								if (this.responseXML.getElementsByTagName("manualIrrBtn")[0].childNodes[0].nodeValue == "0"){
 								document.getElementById("Pompa").innerHTML = "Avvio ";
 								document.getElementById("stato_prog").innerHTML = "Standby ";
-								Pompa_state = 0;
+								Pompa_state = 0;}
+								else {
+									document.getElementById("Pompa").innerHTML = "Avvio ";
+									document.getElementById("stato_prog").innerHTML = "Standby Manuale ";
+									//colore pulsante diverso
+									Pompa_state = 0;
+									}
+									
+								
 							}
+							
+							
 							//Programma
 							
 							document.getElementById("prog_start").innerHTML = "Inizio&nbsp&nbsp&nbsp" + this.responseXML.getElementsByTagName("starthours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("startminutes")[0].childNodes[0].nodeValue;

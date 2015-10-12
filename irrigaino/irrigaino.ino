@@ -601,11 +601,11 @@ void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button 
 {
     if (StrContains(HTTP_req, "Pompa=1")) {
         irrigaino_sts.irrigation=UNDERWAY;
-        irrigaino_sts.manualIrrBtn=true;    // irrigation forced by web client
+        irrigaino_sts.manualIrrBtn=irrigaino_sts.manualIrrBtn^1;    // irrigation forced by web client
     }
     else if (StrContains(HTTP_req, "Pompa=0")) {
         irrigaino_sts.irrigation=STANDBY;
-        irrigaino_sts.manualIrrBtn=false;    // irrigation stop forced by web client
+        irrigaino_sts.manualIrrBtn=irrigaino_sts.manualIrrBtn^1;    // irrigation stop forced by web client
     }
 }
 
