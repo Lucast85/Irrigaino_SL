@@ -81,7 +81,7 @@ char buf_1[TXT_BUF_SZ] = {0};     // buffer to save line 1 text
 char buf_2[TXT_BUF_SZ] = {0};     // buffer to save line 2 text 
 
 // files on SD 
-File webFile;               // the web page file on the SD card
+File webFile;                     // the web page file on the SD card
 
 // TFT-LCD
   // Declare which fonts we will be using
@@ -197,7 +197,7 @@ void updateDisplayedStatusAndButton(irrigation_t* irrigation, manualIrrBtn_t* ma
   else myGLCD.setColor(EN_BUTTON_COLOUR);
   myGLCD.fillRoundRect(205,65,310,95);      // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
   myGLCD.setColor(BACKGROUND_COLOUR);
-  myGLCD.fillRect(200,30,315,60);          // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
+  myGLCD.fillRect(200,30,315,60);           // [FIDOCAD] FJC B 0.5 RV 200 30 315 60 0
   myGLCD.setColor(TEXT_COLOUR);
   myGLCD.drawRoundRect (205,65,310,95);
   myGLCD.setFont(SmallFont);
@@ -439,8 +439,8 @@ void checkPressedBtn_screen1(status_t* l_irrigaino_sts)
         if ((y>=65 ) && (y<=95 ) && (x>=205) && (x<=310))   // "AVVIA/STOP IRRIGAZIONE" button  // [FIDOCAD] FJC B 0.5 RP 205 65 310 95 7
         {
           waitForIt(205,65,310,95); 
-          l_irrigaino_sts->irrigation=(irrigation_t)(l_irrigaino_sts->irrigation^1);          // switch between irrigation ON & OFF
-          l_irrigaino_sts->manualIrrBtn = (manualIrrBtn_t)(l_irrigaino_sts->manualIrrBtn^true);  // switch between button pressed ON & OFF
+          l_irrigaino_sts->irrigation=(irrigation_t)(l_irrigaino_sts->irrigation^1);              // switch between irrigation ON & OFF
+          l_irrigaino_sts->manualIrrBtn = (manualIrrBtn_t)(l_irrigaino_sts->manualIrrBtn^true);   // switch between button pressed ON & OFF
         }
       }
 }
@@ -593,11 +593,9 @@ void updateSoilMoisture(soilmoisture_t* soilMoisture)
   else *soilMoisture=WATER;  // then (soilMoistureValue < SOILMOISTURE_LOWER_THRESHOLD)                                 // the sensor is in water  
 }
 
-//------------------------------- Ethernet ------------------------------------//   //___________INIZIO NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
+//------------------------------- Ethernet ------------------------------------//
 // checks if received HTTP request wants to change "irrigaino_sts.irrigation" status.
-void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button pressed" e non Pompa=1 e Pompa=0.
-                //L'algoritmo in set deve decidere se forzare l'irrigazione o stoppare l'irrigazione, a seconda della situazione di partenza.
-                // Il webClient mi manda Pompa=1 o Pompa=0 SOLO se viene premuto il pulsante sulla webpage. Viene richimata solo se qlcuno ha premuto il pulsante.
+void Set(void)
 {
     if (StrContains(HTTP_req, "Pompa=1")) {
         irrigaino_sts.irrigation=UNDERWAY;
@@ -609,20 +607,19 @@ void Set(void)  //TODO : in realtà dal web deve arrivare solo l'evento "button 
     }
 }
 
-// send the XML file with following irrigaino data: //TODO: // Questa funzione viene richiamata continuamente per aggiornare la pagina web (indica alla pagina lo stato della centralina)
-// - irrigaino_sts.irrigation (ENUM, vedi status.h. E' lo stato della pompa. Può essere STANDBY=0, UNDERWAY=1). Deve essere visualizzato sulla webpage
-// - irrigaino_sts.irrigationStart.hours & irrigaino_sts.irrigationStart.minutes (interi senza segno 8-bit (uint8_t) che indicano gli orari di start e stop dell'irrigazione). Deve essere visualizzata sulla webpage
-// - irrigaino_sts.irrigationEnd.hours & irrigaino_sts.irrigationEnd.minutes (come sopra, ma riguarda la fine dell'irrigazione)
-// - irrigaino_sts.soilMoisture (ENUM, vedi status.h. E' lo stato del sensore di umidità del terreno. Può essere DISCONNECTED=0,  DRY=1,  OK=2,  WATER=3)
-// - irrigaino_sts.manualIrrBtn (è un booleano, se 1 il pulsante di avvio manuale deve essere colorato di blu, se è 0, rimane colorato in verde. In altre parole il colore blu vorrebbe indicare il fatto 
-                                //che qualcuno ha premuto il pulsante forzando l'irrigazione o lo stop)                    
-void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send the XML response with data values that web client will print on its webpage.
+// send the XML file with following irrigaino data. 
+// - irrigaino_sts.irrigation (ENUM, see status.h)
+// - irrigaino_sts.irrigationStart.hours & irrigaino_sts.irrigationStart.minutes (uint8_t see status.h)
+// - irrigaino_sts.irrigationEnd.hours & irrigaino_sts.irrigationEnd.minutes (uint8_t see status.h)
+// - irrigaino_sts.soilMoisture (ENUM, see status.h)
+// - irrigaino_sts.manualIrrBtn (boolean, see status.h)                 
+void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send the XML response with data values that web client will print on its webpage. This function is invoked constantly to update webpage
 {
   Serial.println("on XML_response function");
     cl.print("<?xml version = \"1.0\" ?>");
     cl.print("<inputs>");
     cl.print("<terreno>");
-    cl.print(irrigaino_sts.soilMoisture);    //TODO: stampare sulla webpage -"irrigazione in corso..." oppure -"standby"
+    cl.print(irrigaino_sts.soilMoisture);
     cl.print("</terreno>");
     cl.print("<irrigation>");
     cl.print(irrigaino_sts.irrigation);
@@ -645,8 +642,8 @@ void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send
     cl.print("</inputs>");
 }
 
-// get the two strings for the LCD from the incoming HTTP GET request       //TODO: doveva essere modificata aggiungendo altre 2 stringhe di ingresso come parametri per far stampare anche l'ora di fine irrigazione?
-void GetText()                          // viene chiamata di continuo. Se arriva una richiesta, tira fuori l'ora di inizio/fine irrigazione
+// get the two strings for the LCD from the incoming HTTP GET request. This function is invoked constantly to update webpage
+void GetText()
 {
   String req = String(HTTP_req);
   int commaIndex = req.indexOf('@');
@@ -701,7 +698,6 @@ char StrContains(char *str, char *sfind)
     }
     return 0;
 }
-//___________FINE NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
     
 /**************************************************************************************************
 ***                                       Setup                                                 ***
@@ -786,12 +782,7 @@ void loop()
   bool autoIrrigation=false;
   static status_t old_irrigaino_sts;  //contains old value of the system
   while (true)
-  {  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO HERE\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\   
-
-//-------------------------------------------------------------------HERE START CODE FOR DEBUG ONLY--------------------------------------------------------------------
-
-//-------------------------------------------------------------------HERE FINISH CODE FOR DEBUG ONLY---------------------------------------------------------------------*/
-
+  { 
     // Get RTC data 
     updateDate(&irrigaino_sts.timedata);
     // Get Soil moisture status
@@ -855,7 +846,6 @@ void loop()
     if(irrigaino_sts.activeScreen == SCREEN_1) checkPressedBtn_screen1(&irrigaino_sts);   // check if a button is pressed on screen 1 or on screen 2
     else checkPressedBtn_screen2(&irrigaino_sts);
 
-    //___________INIZIO NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE___________________________________________________________________
     EthernetClient client = server.available();  // try to get client
     if (client) {  // got client?
       Serial.println("got client = yes");
@@ -880,7 +870,7 @@ void loop()
                     // - web page or XML page is requested
                     // - Ajax request - send XML file
              
-                    if (StrContains(HTTP_req, "ajax_inputs")) {   // se il client sta richiedendo i dati dell'arduino (ajax_inputs), allora è sottointeso che la pagina web è già stata caricata dal client ed il client sta richiedendo i dati per l'aggiornamento
+                    if (StrContains(HTTP_req, "ajax_inputs")) {   // if client (browser) request data from Irrigaino (ajax_inputs), then it's clear that the webpage is alreay loaded by client and the client is requesting data to refresh values
                         // send rest of HTTP header
                         client.println("Content-Type: text/xml");
                         client.println("Connection: keep-alive");
@@ -892,13 +882,12 @@ void loop()
                         // print the received text to the LCD if found
                         
                     }
-                    else if (StrContains(HTTP_req, "programmazione")) {          // estrae i valori delle ore e minuti di inizio/fine irrigazione (fine non funziona, senti Stefano)
+                    else if (StrContains(HTTP_req, "programmazione")) { 
                             // write the received text
                             GetText();
                           }
-                    else {  // web page request             // altrimenti il client sta richiedendo la pagina web
+                    else {  // web page request from client
                         // send rest of HTTP header
-                         
                         client.println("Content-Type: text/html");
                         client.println("Connection: keep-alive");
                         client.println();
@@ -935,7 +924,6 @@ void loop()
         delay(1);      // give the web browser time to receive the data
         client.stop(); // close the connection
     } // end if (client)
-    //___________FINE NUOVA PARTE, FUNZIONALITA' ETHERNET, DA CONTROLLARE__________________________________________________________________
     
   } // end while(true)
 } // end loop()
