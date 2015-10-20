@@ -12,8 +12,7 @@
 		strhourstop = "";
 		strminutestop = "";
 		var Pompa_state = 0;
-		var ifrm;
-		
+		var one = 1;
 		
 		function GetArduinoIO()
 		{
@@ -72,8 +71,8 @@
 							
 							//Programma
 							
-							document.getElementById("prog_start").innerHTML = "Inizio&nbsp&nbsp&nbsp" + this.responseXML.getElementsByTagName("starthours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("startminutes")[0].childNodes[0].nodeValue;
-							document.getElementById("prog_stop").innerHTML =  "Fine   &nbsp&nbsp&nbsp" + this.responseXML.getElementsByTagName("stophours")[0].childNodes[0].nodeValue +" : "+this.responseXML.getElementsByTagName("stopminutes")[0].childNodes[0].nodeValue;
+							document.getElementById("prog_start").innerHTML = "Inizio&nbsp&nbsp&nbsp" + addZero(this.responseXML.getElementsByTagName("starthours")[0].childNodes[0].nodeValue) + " : " + addZero(this.responseXML.getElementsByTagName("startminutes")[0].childNodes[0].nodeValue);
+							document.getElementById("prog_stop").innerHTML =  "Fine   &nbsp&nbsp&nbsp" + addZero(this.responseXML.getElementsByTagName("stophours")[0].childNodes[0].nodeValue) + " : " + addZero(this.responseXML.getElementsByTagName("stopminutes")[0].childNodes[0].nodeValue);
 															
 						}
 					}
@@ -155,18 +154,22 @@
 					alert("Inserire un orario di programmazione valido");
 					}
         }
+		
 		function Time (){
 		var currentdate = new Date(); 
 		
         document.getElementById("ora").innerHTML = addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes());   
         var h = addZero(currentdate.getHours());
 		var m = addZero(currentdate.getMinutes());
-		nocache = "&nocache=" + Math.random() * 1000000;
-		var request = new XMLHttpRequest();
-		request.open("GET", "RTCTime" +"@" + h + "@" + m + "@" + nocache, true);
-		request.send(null);
-            
+		if(one){
+			nocache = "&nocache=" + Math.random() * 1000000;
+			var request = new XMLHttpRequest();
+			request.open("GET", "RTCTime" +"@" + h + "@" + m + "@" + nocache, true);
+			request.send(null);
+			one = 0;
+          }  
 		}
+		
 		function OraManuale(){
 			 document.getElementById('OraManuale').style.visibility="hidden";
 			 document.getElementById('orario').style.display="inline";
@@ -248,7 +251,7 @@
 			}
 		
 	.IO_box {
-				float: left;
+			float: left;
 			margin: 20px 20px 20px 20px;
 			border: 3px solid blue;
 			padding: 10px 5px 10px 5px;
@@ -258,8 +261,8 @@
 			background: rgba(204, 204, 204, 0.8);
 			
 		}
-		h1 {
-			font-size: 42px;
+		h1{
+			font-size: 48px;
 			color: blue;
 			margin: 10px 0px 10px 25px;
 			text-align: left;
@@ -284,7 +287,7 @@
 			font-weight: bold;
 			text-align: center;
 			text-shadow: 5px 1px 5px rgba(150, 150, 150, 1);
-			
+			position:relative;
 		}
 		
 		button{
@@ -318,12 +321,14 @@
 
 		}
 		
+		
+		
 					
 			</style>
 	</head>
     <body onload="GetArduinoIO()" >
-		<h1>FabLab Ancona</h1> 
-		<img src="logo.png" /><br />
+		 <h1>FabLab Ancona</h1>	
+		
 		
         <div class="IO_box">
 			

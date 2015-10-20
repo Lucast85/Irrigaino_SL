@@ -541,6 +541,32 @@ byte bcdToDec(byte val)
   return ( (val/16*10) + (val%16) );
 }
 
+// Convert normal decimal numbers to binary coded decimal
+byte decToBcd(byte val)
+{
+  return ( (val/10*16) + (val%10) );
+}
+
+// Set the time into RCT ////TODO HERE!!!!!!! trasforma la stringa in intero e caricala nell'RTC
+void setDateTime(uint8_t hours, uint8_t minutes)
+{
+  Wire.beginTransmission(DS1307_ADDRESS);
+  Wire.write(0); //stop Oscillator. Workaround for issue #527
+
+  Wire.write(decToBcd(0));  // seconds
+  Wire.write(decToBcd(minutes));  
+  Wire.write(decToBcd(hours));
+  Wire.write(decToBcd(1));  //weekday 
+  Wire.write(decToBcd(1));  //monthday
+  Wire.write(decToBcd(1));  //month
+  Wire.write(decToBcd(15));   //year
+
+  Wire.write(0); //start. Workaround for issue #527
+
+  Wire.endTransmission();
+}
+
+
 // Update the actual date from RTC
 void updateDate(timedata_t* timedata)
 {
@@ -617,7 +643,7 @@ void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send
     cl.print("<?xml version = \"1.0\" ?>");
     cl.print("<inputs>");
     cl.print("<terreno>");
-    cl.print(irrigaino_sts.soilMoisture);
+    cl.print(irrigaino_sts.soilMoisture);   
     cl.print("</terreno>");
     cl.print("<irrigation>");
     cl.print(irrigaino_sts.irrigation);
@@ -626,7 +652,7 @@ void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send
     cl.print(irrigaino_sts.manualIrrBtn);
     cl.print("</manualIrrBtn>"); 
     cl.print("<starthours>");
-    cl.print(irrigaino_sts.irrigationStart.hours);
+    cl.print(irrigaino_sts.irrigationStart.hours);  // TODO : invece del valore numerico (uint8_t) passagli la stringa con gli zeri di riempimento 
     cl.print("</starthours>");
     cl.print("<startminutes>");
     cl.print(irrigaino_sts.irrigationStart.minutes);
@@ -671,10 +697,8 @@ void GetTime()
   String H = req.substring(commaIndex+1, secondcommaIndex);
   String M = req.substring(secondcommaIndex+1, thirdcommaIndex);
 
-  //Setta il tempo RTC
-  
-  
-  }
+  setDateTime(H.toInt(), M.toInt());    // set RTC time from webpage
+}
 // sets every element of str to 0 (clears array)
 void StrClear(char *str, char length)
 {
@@ -726,10 +750,6 @@ void setup()
   myGLCD.clrScr();
   myGLCD.setFont(BigFont);
   myGLCD.setBackColor(VGA_TRANSPARENT);
-  
-  // Initialize touchscreen
-  myTouch.InitTouch();
-  myTouch.setPrecision(PREC_MEDIUM);
 
   // Initialize I2C for RTC module
   Wire.begin();
@@ -788,9 +808,12 @@ void setup()
   
   // Draw irrigation status and manual button 
   updateDisplayedStatusAndButton(&irrigaino_sts.irrigation, &irrigaino_sts.manualIrrBtn);
+
+  // Initialize touchscreen
+  myTouch.InitTouch();
+  myTouch.setPrecision(PREC_MEDIUM);
 }
-
-
+  
 /*******************************************************************************************************************************
 ***                                                       MAIN LOOP                                                          ***
 *******************************************************************************************************************************/
@@ -905,22 +928,16 @@ void loop()
                             // write the received text
                             GetText();
                     }
-                    else  if (StrContains(HTTP_req, "GET /logo.png")) {
-                            webFile = SD.open("logo.png");
-                            if (webFile) {
-                              client.println("HTTP/1.1 200 OK");
-                              client.println();
-                            }
-                    }
-                    else if (StrContains(HTTP_req, "RTCTime")) {
+                    
+                    else if (StrContains(HTTP_req, "RTCTime")) {  //TODO invia continuamente ora e minuti. Occorre invece settarli solo la prima volta che si apre la pagina web
                             GetTime();
                             }
 
-                     else if (StrContains(HTTP_req, "SetTime")) {
+                     else if (StrContains(HTTP_req, "SetTime")) { //TODO viene richiamanta quando manualmente qualcuno gli dice di impostare un orario diverso. va sempre fatta!
                             GetTime();
                             
                             }       
-                    else {  // web page request from client
+                    else if (StrContains(HTTP_req, "GET / ") || StrContains(HTTP_req, "GET /index.htm")) {  // web page request from client
                         // send rest of HTTP header
                         client.println("Content-Type: text/html");
                         client.println("Connection: keep-alive");
