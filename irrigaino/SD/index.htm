@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>IRRIGAINO</title>
+        <title>FabLab Ancona</title>
        
 		<script>
-		
+		seth = "";
+		setm = "";
 		strPompa = "";
 		strhourstart = "";
         strminutestart = "";
 		strhourstop = "";
 		strminutestop = "";
 		var Pompa_state = 0;
+		var ifrm;
+		
+		
 		function GetArduinoIO()
 		{
 			nocache = "&nocache=" + Math.random() * 1000000;
@@ -75,11 +79,11 @@
 					}
 				}
 			}
-			// send HTTP GET request with LEDs to switch on/off if any
+			// send HTTP GET request with to switch on/off if any
 			request.open("GET", "ajax_inputs" + strPompa + nocache, true);
 			request.send(null);
+			Time();
 			setTimeout('GetArduinoIO()', 1000);
-			
 			strPompa = "";
 		}
 		// service LEDs when checkbox checked/unchecked
@@ -116,7 +120,20 @@
 			}
 			
 			//controllo se orario valido
-		
+			if(document.getElementById("txt_form").hourstart.value >= 24 || document.getElementById("txt_form").hourstart.value < 0 ){
+				check = 0;
+			}
+			if (document.getElementById("txt_form").minutestart.value > 60 || document.getElementById("txt_form").minutestart.value < 0 ){
+				check = 0;
+			}
+			
+			if(document.getElementById("txt_form").hourstop.value >= 24 || document.getElementById("txt_form").hourstop.value < 0 ){
+				check = 0;
+			}
+			if (document.getElementById("txt_form").minutestop.value > 60 || document.getElementById("txt_form").minutestop.value < 0 ){
+				check = 0;
+			}
+			
 			if(check){	
 				nocache = "&nocache=" + Math.random() * 1000000;
 				var request = new XMLHttpRequest();
@@ -138,8 +155,84 @@
 					alert("Inserire un orario di programmazione valido");
 					}
         }
-	
+		function Time (){
+		var currentdate = new Date(); 
+		
+        document.getElementById("ora").innerHTML = addZero(currentdate.getHours()) + ":" + addZero(currentdate.getMinutes());   
+        var h = addZero(currentdate.getHours());
+		var m = addZero(currentdate.getMinutes());
+		nocache = "&nocache=" + Math.random() * 1000000;
+		var request = new XMLHttpRequest();
+		request.open("GET", "RTCTime" +"@" + h + "@" + m + "@" + nocache, true);
+		request.send(null);
+            
+		}
+		function OraManuale(){
+			 document.getElementById('OraManuale').style.visibility="hidden";
+			 document.getElementById('orario').style.display="inline";
+			 document.getElementById('OKora').style.top="0px";
+			 document.getElementById('OKora').style.width="40px";
+			 document.getElementById('OKora').style.left="120px";
+			 document.getElementById('OKora').style.visibility="visible";
+		}	
+		
+		
+		function addZero(i){
+			if(i<10){
+				i = "0" + i;
+				}
+			return i;
+		
+		}
+		
+		
+		function SetTime(){
+			 
+			 var check = 1;
+				
+
+				//controlla se è un numero
+				if (isNaN(document.getElementById("clock_form").ora.value)){
+					check = 0;
+				}
+				if (isNaN(document.getElementById("clock_form").minuti.value)){
+					check = 0;
+				}
+				
+				//controllo se orario valido
+				if(document.getElementById("clock_form").ora.value >= 24 || document.getElementById("clock_form").ora.value < 0 ){
+					check = 0;
+				}
+				if (document.getElementById("clock_form").minuti.value > 60 || document.getElementById("clock_form").minuti.value < 0 ){
+					check = 0;
+				}
+				
+								
+				if(check){	
+					nocache = "&nocache=" + Math.random() * 1000000;
+					var request = new XMLHttpRequest();
+					
+					seth = "@" + document.getElementById("clock_form").ora.value;
+					setm = "@" + document.getElementById("clock_form").minuti.value;
+				
+					
+					request.open("GET", "SetTime" + seth + setm + "@" + nocache, true);
+					request.send(null);
+					document.getElementById("clock_form").ora.value='';
+					document.getElementById("clock_form").minuti.value='';
+					check=0;
+					document.getElementById('OraManuale').style.visibility="visible";
+					document.getElementById('orario').style.display="none";
+					document.getElementById('OKora').style.visibility="hidden";
+					
+					}
+				else{
+						alert("Inserire un orario valido");
+						}
+		 
+		}	
 	</script>
+	
 	<style>	
 	
 	body {
@@ -213,22 +306,25 @@
 		
 		}		
 		
-		output {
+		output		{
 			height:50px;
 			width: 170px;
 			position: absolute;
 			font-size: 18px;
 			text-align: center;
+			font:  bold;
+			font-weight: bold;
 			text-shadow: 5px 1px 5px rgba(150, 150, 150, 1);
 
 		}
-			
+		
+					
 			</style>
 	</head>
-    <body onload="GetArduinoIO()">
-     
-		<h1>IRRIGAINO</h1>
-	
+    <body onload="GetArduinoIO()" >
+		<h1>FabLab Ancona</h1> 
+		<img src="logo.png" /><br />
+		
         <div class="IO_box">
 			
 			<h2>Stato terreno :</h2><br />
@@ -246,7 +342,7 @@
 		</div>
 		<div class="IO_box">
 			<h2>Programma :</h2><br />
-			<form id="txt_form" name="frmText">
+		<form id="txt_form" name="frmText">
             <label>Inizio <input type="text" name="hourstart" size="1" maxlength="2" /></label>
             <label>: <input type="text" name="minutestart" size="1" maxlength="2" /></label><br /><br />
 			<label>Fine <input type="text" name="hourstop" size="1" maxlength="2" /></label>
@@ -266,7 +362,19 @@
 		
 		</div>
 		
+		<div class="IO_box">
+		<h2>Orario </h2><br />
+		<output id="ora"></output><br/>
 		
+		<button type="button" class="myButton" id="OraManuale" onclick=" OraManuale()">Manuale</button><br />
+		<div id="orario" style="display:none">
+		<form id="clock_form" name="frmText">
+		<label>Ora <input type="text"  name="ora" size="1" maxlength="2" /></label>
+        <label>: <input type="text"  name="minuti" size="1" maxlength="2" /></label><br /><br />
+		</form>
+		<button type="button" class="myButton" id="OKora" onclick=" SetTime()">OK</button><br /><br /> 
+		</div>
+		</div>
 	  
 	</body>
 	

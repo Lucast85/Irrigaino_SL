@@ -8,8 +8,6 @@
 #include <SPI.h>            // SPI driver for SD card & ethernet module 
 #include <SD.h>             // SD library
 #include <UIPEthernet.h>    // Ethernet library
-#include <UIPServer.h>
-#include <UIPClient.h>
 
 #include "time.h"
 #include "status.h"
@@ -664,6 +662,19 @@ void GetText()
   irrigaino_sts.irrigationEnd.minutes = STOP_M.toInt();
 }
 
+void GetTime()
+{ 
+   String req = String(HTTP_req);
+  int commaIndex = req.indexOf('@');
+  int secondcommaIndex = req.indexOf('@',commaIndex+1);
+  int thirdcommaIndex = req.indexOf('@',secondcommaIndex+1);
+  String H = req.substring(commaIndex+1, secondcommaIndex);
+  String M = req.substring(secondcommaIndex+1, thirdcommaIndex);
+
+  //Setta il tempo RTC
+  
+  
+  }
 // sets every element of str to 0 (clears array)
 void StrClear(char *str, char length)
 {
@@ -728,6 +739,18 @@ void setup()
   pinMode(SDCARD_CS_PIN,OUTPUT);    
   pinMode(SOIL_MOISTURE_PIN, INPUT);
 
+  // initialize ethernet
+  if (Ethernet.begin(MAC) == 0) // initialize Ethernet device
+  {
+    drawAlert("Failed", "to configure","Ethernet","using DHCP");
+    for(;;);// no point in carrying on, so do nothing forevermore
+  }
+  char buf[20];
+  sprintf(buf,"%d:%d:%d:%d", Ethernet.localIP()[0],Ethernet.localIP()[1],Ethernet.localIP()[2],Ethernet.localIP()[3]);  // get assigned IP
+  drawAlert("DHCP server","has assigned:",buf,""); // print your local IP address
+  server.begin();           // start to listen for clients
+  delay(3000);
+  
   // initialize SD card
   drawAlert("Initializing ", "SD card...","","");
   delay(600);
@@ -749,10 +772,6 @@ void setup()
   drawAlert("SUCCESS - ", "SD card", "Found ","index.htm file." );
   delay(800);
   myGLCD.clrScr();
-  
-  // initialize ethernet
-  Ethernet.begin(MAC, ip);  // initialize Ethernet device
-  server.begin();           // start to listen for clients
 
   // Draw main screen
   draw1stScreen();
@@ -885,7 +904,22 @@ void loop()
                     else if (StrContains(HTTP_req, "programmazione")) { 
                             // write the received text
                             GetText();
-                          }
+                    }
+                    else  if (StrContains(HTTP_req, "GET /logo.png")) {
+                            webFile = SD.open("logo.png");
+                            if (webFile) {
+                              client.println("HTTP/1.1 200 OK");
+                              client.println();
+                            }
+                    }
+                    else if (StrContains(HTTP_req, "RTCTime")) {
+                            GetTime();
+                            }
+
+                     else if (StrContains(HTTP_req, "SetTime")) {
+                            GetTime();
+                            
+                            }       
                     else {  // web page request from client
                         // send rest of HTTP header
                         client.println("Content-Type: text/html");
