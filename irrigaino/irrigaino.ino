@@ -7,7 +7,7 @@
 #include <UTouch.h>         // Touchscreen driver for XPT2046
 #include <SPI.h>            // SPI driver for SD card & ethernet module 
 #include <SD.h>             // SD library
-#include <UIPEthernet.h>    // Ethernet library
+#include <UIPEthernet.h>    // Ethernet library 
 
 #include "time.h"
 #include "status.h"
@@ -15,6 +15,7 @@
 /*************************************************************************************************
 ***                                 DEFINE                                                     ***
 *************************************************************************************************/
+//#define SERIAL_MONITOR      // comment out to shut down serial monitor
 
 // desired LCD colours
 #define FRAME_COLOUR                VGA_LIME
@@ -547,19 +548,19 @@ byte decToBcd(byte val)
   return ( (val/10*16) + (val%10) );
 }
 
-// Set the time into RCT ////TODO HERE!!!!!!! trasforma la stringa in intero e caricala nell'RTC
+// Set the time into RCT
 void setDateTime(uint8_t hours, uint8_t minutes)
 {
   Wire.beginTransmission(DS1307_ADDRESS);
   Wire.write(0); //stop Oscillator. Workaround for issue #527
 
-  Wire.write(decToBcd(0));  // seconds
+  Wire.write(decToBcd(30));       // seconds
   Wire.write(decToBcd(minutes));  
   Wire.write(decToBcd(hours));
-  Wire.write(decToBcd(1));  //weekday 
-  Wire.write(decToBcd(1));  //monthday
-  Wire.write(decToBcd(1));  //month
-  Wire.write(decToBcd(15));   //year
+  Wire.write(decToBcd(1));        //weekday 
+  Wire.write(decToBcd(1));        //monthday
+  Wire.write(decToBcd(1));        //month
+  Wire.write(decToBcd(15));       //year
 
   Wire.write(0); //start. Workaround for issue #527
 
@@ -652,7 +653,7 @@ void XML_response(EthernetClient cl)      // Irrigaino (i.e. the webserver) send
     cl.print(irrigaino_sts.manualIrrBtn);
     cl.print("</manualIrrBtn>"); 
     cl.print("<starthours>");
-    cl.print(irrigaino_sts.irrigationStart.hours);  // TODO : invece del valore numerico (uint8_t) passagli la stringa con gli zeri di riempimento 
+    cl.print(irrigaino_sts.irrigationStart.hours);
     cl.print("</starthours>");
     cl.print("<startminutes>");
     cl.print(irrigaino_sts.irrigationStart.minutes);
@@ -743,7 +744,9 @@ void setup()
 // Initial setup
 
   // Only for debug purposes
-  Serial.begin(9600);
+  #ifdef SERIAL_MONITOR
+    Serial.begin(9600);
+  #endif
       
   // Initialize display
   myGLCD.InitLCD();
@@ -758,19 +761,29 @@ void setup()
   pinMode(RELAY_PIN,OUTPUT);          
   pinMode(SDCARD_CS_PIN,OUTPUT);    
   pinMode(SOIL_MOISTURE_PIN, INPUT);
-
+  
+  
   // initialize ethernet
-  if (Ethernet.begin(MAC) == 0) // initialize Ethernet device
+  if (Ethernet.begin(MAC) == 0) // initialize Ethernet device using no DHCP server (use a standard IP)
   {
     drawAlert("Failed", "to configure","Ethernet","using DHCP");
-    for(;;);// no point in carrying on, so do nothing forevermore
+    delay(3000);
+    Ethernet.begin(MAC,ip);     // initialize Ethernet device using standard IP (See define IP. Default: 192.168.1.33)
+    char buf[20];
+    sprintf(buf,"%d:%d:%d:%d", Ethernet.localIP()[0],Ethernet.localIP()[1],Ethernet.localIP()[2],Ethernet.localIP()[3]);  // get assigned IP
+    drawAlert("Default ", "IP address","is",buf);
   }
-  char buf[20];
-  sprintf(buf,"%d:%d:%d:%d", Ethernet.localIP()[0],Ethernet.localIP()[1],Ethernet.localIP()[2],Ethernet.localIP()[3]);  // get assigned IP
-  drawAlert("DHCP server","has assigned:",buf,""); // print your local IP address
-  server.begin();           // start to listen for clients
+  else
+  {
+    char buf[20];
+    sprintf(buf,"%d:%d:%d:%d", Ethernet.localIP()[0],Ethernet.localIP()[1],Ethernet.localIP()[2],Ethernet.localIP()[3]);  // get assigned IP
+    drawAlert("DHCP server","has assigned:",buf,""); // print local IP address
+  }
   delay(3000);
   
+  server.begin();           // start to listen for clients
+  delay(400);
+    
   // initialize SD card
   drawAlert("Initializing ", "SD card...","","");
   delay(600);
@@ -890,7 +903,9 @@ void loop()
 
     EthernetClient client = server.available();  // try to get client
     if (client) {  // got client?
-      Serial.println("got client = yes");
+      #ifdef SERIAL_MONITOR
+        Serial.println("got client = yes");
+      #endif
         boolean currentLineIsBlank = true;
         while (client.connected()) {
              
@@ -920,7 +935,9 @@ void loop()
                         Set();
                         // send XML file containing input states
                         XML_response(client);
-                        Serial.println("XMLResponse executed");
+                        #ifdef SERIAL_MONITOR
+                          Serial.println("XMLResponse executed");
+                        #endif
                         // print the received text to the LCD if found
                         
                     }
@@ -929,11 +946,11 @@ void loop()
                             GetText();
                     }
                     
-                    else if (StrContains(HTTP_req, "RTCTime")) {  //TODO invia continuamente ora e minuti. Occorre invece settarli solo la prima volta che si apre la pagina web
+                    else if (StrContains(HTTP_req, "RTCTime")) { 
                             GetTime();
                             }
 
-                     else if (StrContains(HTTP_req, "SetTime")) { //TODO viene richiamanta quando manualmente qualcuno gli dice di impostare un orario diverso. va sempre fatta!
+                     else if (StrContains(HTTP_req, "SetTime")) { 
                             GetTime();
                             
                             }       
@@ -952,7 +969,9 @@ void loop()
                         }
                     }
                     // display received HTTP request on serial port
-                    Serial.print(HTTP_req);
+                    #ifdef SERIAL_MONITOR
+                      Serial.print(HTTP_req);
+                    #endif
                     // reset buffer index and all buffer elements to 0
                     req_index = 0;
                     StrClear(HTTP_req, REQ_BUF_SZ);
@@ -976,6 +995,8 @@ void loop()
         client.stop(); // close the connection
     } // end if (client)
     
+  //Ethernet.maintain();  //Allows for the renewal of DHCP leases
+  
   } // end while(true)
 } // end loop()
 
