@@ -762,6 +762,7 @@ void setup()
   pinMode(SDCARD_CS_PIN,OUTPUT);    
   pinMode(SOIL_MOISTURE_PIN, INPUT);
   
+  drawAlert("", "  Waiting for","  IP ADDRESS","");
   
   // initialize ethernet
   if (Ethernet.begin(MAC) == 0) // initialize Ethernet device using no DHCP server (use a standard IP)
